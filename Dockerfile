@@ -37,7 +37,7 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
     NEXT_PUBLIC_ADMIN_URL=$NEXT_PUBLIC_ADMIN_URL \
     NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    NODE_OPTIONS=--max-old-space-size=4096
+    NODE_OPTIONS=--max-old-space-size=2560
 
 # Turbopack (`pnpm build`): ~4min vs ~34min do webpack num VPS. O bloco `webpack:`
 # do Sentry (tree-shake + upload de sourcemap em build-time) é ignorado, mas o

@@ -197,7 +197,7 @@ export function ConversationListItem({
       className={cn(
         "group relative flex w-full items-start gap-3 border-b border-border/70 px-3 py-2.5 text-left transition-colors hover:bg-surface-elevated",
         "focus-visible:outline-hidden focus-visible:bg-surface-elevated",
-        isSelected && "bg-accent-50 hover:bg-accent-50",
+        isSelected && "bg-accent-50 hover:bg-accent-50 text-neutral-950",
       )}
       aria-current={isSelected ? "true" : undefined}
     >
@@ -217,7 +217,14 @@ export function ConversationListItem({
               className="object-cover"
             />
           ) : null}
-          <AvatarFallback className="bg-surface-elevated text-xs font-medium text-text-muted">
+          <AvatarFallback
+            className={cn(
+              "text-xs font-medium",
+              isSelected
+                ? "bg-neutral-900/10 text-neutral-900"
+                : "bg-surface-elevated text-text-muted",
+            )}
+          >
             {initials(displayName, phoneFallback)}
           </AvatarFallback>
         </Avatar>
@@ -234,12 +241,22 @@ export function ConversationListItem({
         {naFila && (
           <div className="mb-1 flex items-center gap-1.5">
             <span
-              className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-soft px-1 text-[10px] font-medium tabular-nums text-accent"
+              className={cn(
+                "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums",
+                isSelected
+                  ? "bg-neutral-900/15 text-neutral-950"
+                  : "bg-accent-soft text-accent",
+              )}
               aria-label={`${t("Posição")} ${queuePosition} ${t("na fila")}`}
             >
               {queuePosition}º
             </span>
-            <span className="text-[11px] text-text-muted">
+            <span
+              className={cn(
+                "text-[11px]",
+                isSelected ? "font-medium text-neutral-700" : "text-text-muted",
+              )}
+            >
               {waitingLabel(conversation, t, localeDaData)}
             </span>
           </div>
@@ -248,14 +265,19 @@ export function ConversationListItem({
           <span
             className={cn(
               "truncate text-sm",
-              unread > 0 ? "font-semibold text-text" : "font-medium text-text",
-              c?.is_anonymized && "font-normal italic text-text-muted",
+              isSelected
+                ? (unread > 0 ? "font-semibold text-neutral-950" : "font-medium text-neutral-950")
+                : (unread > 0 ? "font-semibold text-text" : "font-medium text-text"),
+              c?.is_anonymized && (isSelected ? "font-normal italic text-neutral-700" : "font-normal italic text-text-muted"),
             )}
           >
             {displayName}
           </span>
           <span
-            className="shrink-0 text-[11px] tabular-nums text-text-subtle"
+            className={cn(
+              "shrink-0 text-[11px] tabular-nums",
+              isSelected ? "font-medium text-neutral-700" : "text-text-subtle",
+            )}
             // O mesmo lugar da tela mostra duas coisas diferentes conforme a aba:
             // na Fila é "desde quando o cliente escreveu", nas outras é "há quanto
             // tempo a conversa mexeu". O rótulo existe só onde a leitura muda.
@@ -269,16 +291,30 @@ export function ConversationListItem({
           <p
             className={cn(
               "min-w-0 truncate text-[13px]",
-              unread > 0 ? "text-text" : "text-text-muted",
+              isSelected
+                ? (unread > 0 ? "font-medium text-neutral-950" : "text-neutral-800")
+                : (unread > 0 ? "text-text" : "text-text-muted"),
             )}
           >
             {isAi && mostrarAutomatico ? (
-              <Robot size={12} weight="duotone" className="mr-1 inline align-[-2px]" aria-hidden />
+              <Robot
+                size={12}
+                weight="duotone"
+                className={cn("mr-1 inline align-[-2px]", isSelected ? "text-neutral-800" : undefined)}
+                aria-hidden
+              />
             ) : null}
             {truncated}
           </p>
           {unread > 0 && (
-            <span className="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-semibold tabular-nums text-accent-foreground">
+            <span
+              className={cn(
+                "inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold tabular-nums",
+                isSelected
+                  ? "bg-neutral-950 text-white"
+                  : "bg-accent px-1.5 text-accent-foreground",
+              )}
+            >
               {unread}
             </span>
           )}
@@ -287,20 +323,44 @@ export function ConversationListItem({
         {temSelos && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1">
             {visibleTags.map((t) => (
-              <Badge key={t} variant="secondary" className="h-4 px-1.5 text-[10px]">
+              <Badge
+                key={t}
+                variant="secondary"
+                className={cn(
+                  "h-4 px-1.5 text-[10px]",
+                  isSelected && "border-neutral-900/15 bg-neutral-900/10 text-neutral-900",
+                )}
+              >
                 {t}
               </Badge>
             ))}
             {overflow > 0 && (
-              <span className="text-[10px] text-text-muted">+{overflow}</span>
+              <span
+                className={cn(
+                  "text-[10px]",
+                  isSelected ? "font-medium text-neutral-800" : "text-text-muted",
+                )}
+              >
+                +{overflow}
+              </span>
             )}
             {mostrarAtendente && comando.quem === "humano" && (
-              <OwnerBadge ownerKind="user" ownerName={comando.nome ?? t("Atendente")} compacto />
+              <OwnerBadge
+                ownerKind="user"
+                ownerName={comando.nome ?? t("Atendente")}
+                compacto
+                className={isSelected ? "[&_span]:text-neutral-900" : undefined}
+              />
             )}
             {mostrarCanal && rotuloCanal && (
               <Badge
                 variant="outline"
-                className="h-4 gap-1 px-1.5 text-[10px] font-normal text-text-muted"
+                className={cn(
+                  "h-4 gap-1 px-1.5 text-[10px] font-normal",
+                  isSelected
+                    ? "border-neutral-900/20 text-neutral-900"
+                    : "text-text-muted",
+                )}
                 title={`${t("Entrou por")} ${rotuloCanal}`}
               >
                 <Phone size={9} weight="regular" aria-hidden />
@@ -313,7 +373,13 @@ export function ConversationListItem({
               </Badge>
             )}
             {c?.is_anonymized && (
-              <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
+              <Badge
+                variant="outline"
+                className={cn(
+                  "h-4 px-1.5 text-[10px]",
+                  isSelected ? "border-neutral-900/20 text-neutral-900" : "",
+                )}
+              >
                 {t("Anonimizado")}
               </Badge>
             )}

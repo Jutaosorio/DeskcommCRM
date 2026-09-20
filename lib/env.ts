@@ -69,6 +69,9 @@ const schema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: requiredAlways("NEXT_PUBLIC_SUPABASE_URL").url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: requiredAlways("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   SUPABASE_SERVICE_ROLE_KEY: requiredAlways("SUPABASE_SERVICE_ROLE_KEY"),
+  // Marca o perfil Docker local. Quando ligado, PublicEnvScript recusa qualquer
+  // URL do Supabase que nao seja loopback antes de ela chegar ao navegador.
+  NEXT_PUBLIC_LOCAL_STACK: z.enum(["", "1"]).optional().default(""),
 
   // Cron / interno
   INTERNAL_SECRET: required("INTERNAL_SECRET"),

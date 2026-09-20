@@ -9,6 +9,7 @@
 interface PublicEnv {
   NEXT_PUBLIC_SUPABASE_URL?: string;
   NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
+  NEXT_PUBLIC_LOCAL_STACK?: string;
   SENTRY_DSN?: string;
   /**
    * Marca da instalação (white-label), já RESOLVIDA — banco acima, arquivo de

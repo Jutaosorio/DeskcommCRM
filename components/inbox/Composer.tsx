@@ -131,7 +131,8 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
       },
       {
         onSuccess: () => {
-          setText("");
+          // O input já foi limpo no submit de forma otimista. Não chamamos setText("")
+          // aqui para não apagar uma nova mensagem que o usuário já tenha começado a digitar.
           // A citação vale para UMA mensagem. Mantê-la depois do envio faria a
           // próxima frase sair citando algo que o atendente já respondeu.
           onCancelarResposta?.();

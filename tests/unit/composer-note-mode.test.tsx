@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -60,6 +60,30 @@ describe("Composer + modo nota interna", () => {
     fireEvent.click(screen.getByRole("button", { name: /^enviar$/i }));
 
     expect(input).toHaveValue("");
+  });
+
+  it("não apaga o novo texto digitado se onSuccess disparar depois que o usuário começou a digitar", () => {
+    let capturedOnSuccess: (() => void) | undefined;
+    sendMock.mockImplementation((_payload, options) => {
+      capturedOnSuccess = options?.onSuccess;
+    });
+    renderComposer();
+    const input = screen.getByLabelText(/mensagem/i);
+    fireEvent.change(input, { target: { value: "primeira mensagem" } });
+    fireEvent.click(screen.getByRole("button", { name: /^enviar$/i }));
+    expect(input).toHaveValue("");
+
+    // Usuário começa a digitar a segunda mensagem logo em seguida
+    fireEvent.change(input, { target: { value: "segunda mensagem em andamento" } });
+    expect(input).toHaveValue("segunda mensagem em andamento");
+
+    // Agora o request anterior conclui com sucesso
+    act(() => {
+      capturedOnSuccess?.();
+    });
+
+    // O input NÃO deve ser limpo!
+    expect(input).toHaveValue("segunda mensagem em andamento");
   });
 
   it("alterna pra modo nota interna: some anexo/rascunho/áudio, muda placeholder", () => {

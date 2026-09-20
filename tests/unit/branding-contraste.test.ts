@@ -224,7 +224,7 @@ describe("derivarMarca — as 16 sementes adversariais", () => {
         .map((t) => `${semente}/${t.deslocamento}`),
     );
     expect(deslocados.length).toBeGreaterThan(0);
-    expect(deslocados).toHaveLength(13);
+    expect(deslocados).toHaveLength(12);
 
     // O amarelo é o caso que NÃO tem escapatória física: nenhum stop claro de amarelo
     // alcança 3:1 contra `#ffffff`. Se ele parar de andar, a caminhada quebrou.

@@ -1,6 +1,7 @@
 "use client";
 import { useT } from "@/hooks/i18n/useT";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { OwnerKind } from "@/lib/types/leads";
 
 /** Iniciais a partir do nome (primeira + última palavra). */
@@ -26,6 +27,7 @@ export function OwnerBadge({
   ownerName,
   agentVersion,
   compacto = false,
+  className,
 }: {
   ownerKind: OwnerKind;
   ownerName: string | null;
@@ -40,13 +42,14 @@ export function OwnerBadge({
    * segundo arquivo é como duas telas passam a dizer a mesma coisa de dois jeitos.
    */
   compacto?: boolean;
+  className?: string;
 }) {
   const t = useT();
   if (!ownerKind) {
     // Mesma geometria dos outros dois estados (disco de 24px + rótulo), para o
     // rodapé do card não mudar de altura conforme o lead tem dono ou não.
     return (
-      <div className="flex items-center gap-1.5" aria-label={t("Sem responsável")}>
+      <div className={cn("flex items-center gap-1.5", className)} aria-label={t("Sem responsável")}>
         <span
           className={`${compacto ? "h-4 w-4" : "h-6 w-6"} shrink-0 rounded-full border border-dashed border-border-strong`}
           aria-hidden
@@ -65,7 +68,7 @@ export function OwnerBadge({
 
   return (
     <div
-      className="flex items-center gap-1.5"
+      className={cn("flex items-center gap-1.5", className)}
       aria-label={`${t("Responsável")}: ${fullLabel}`}
       title={fullLabel}
     >

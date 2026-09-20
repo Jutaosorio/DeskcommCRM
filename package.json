@@ -25,7 +25,7 @@
     "test:unit": "vitest run",
     "test:db": "bash scripts/test-db.sh",
     "test:db:update": "bash scripts/test-update-com-dados.sh",
-    "test:shell": "bash tests/shell/update-guard.test.sh && bash tests/shell/baseline-reaplica-apos-disputa.test.sh && bash tests/shell/dono-do-projeto.test.sh && bash tests/shell/scheduler-entrypoint.test.sh && bash tests/shell/cron-sem-crontab-previo.test.sh && bash tests/shell/owner-id-por-email.test.sh && bash tests/shell/deskcomm-contribuir.test.sh && bash tests/shell/colisao-de-migration.test.sh && bash tests/shell/env-e2e-porta-do-stack.test.sh && bash tests/shell/instalar-guias.test.sh && bash hostgator-setup-kit/test-validators.sh",
+    "test:shell": "bash tests/shell/update-guard.test.sh && bash tests/shell/baseline-reaplica-apos-disputa.test.sh && bash tests/shell/dono-do-projeto.test.sh && bash tests/shell/scheduler-entrypoint.test.sh && bash tests/shell/cron-sem-crontab-previo.test.sh && bash tests/shell/owner-id-por-email.test.sh && bash tests/shell/deskcomm-contribuir.test.sh && bash tests/shell/colisao-de-migration.test.sh && bash tests/shell/env-e2e-porta-do-stack.test.sh && bash tests/shell/instalar-guias.test.sh && bash tests/shell/stack-local.test.sh && bash hostgator-setup-kit/test-validators.sh",
     "test:invariants": "bash scripts/test-db.sh",
     "lint:channels": "tsx scripts/lint-channels.ts",
     "lint:role-rank": "tsx scripts/lint-role-rank.ts",
@@ -36,7 +36,11 @@
     "gov:verify": "pnpm typecheck && pnpm lint && pnpm lint:channels && pnpm lint:role-rank && pnpm test:unit",
     "worker": "tsx --env-file=.env --env-file=.env.local workers/agent-worker/main.ts",
     "dev:crons": "tsx --env-file=.env --env-file=.env.local scripts/dev-crons.ts",
-    "flywheel:judge": "tsx --env-file=.env --env-file=.env.local scripts/flywheel-judge-live.ts"
+    "flywheel:judge": "tsx --env-file=.env --env-file=.env.local scripts/flywheel-judge-live.ts",
+    "stack:local:up": "bash scripts/stack-local.sh up",
+    "stack:local:down": "bash scripts/stack-local.sh down",
+    "stack:local:reset": "bash scripts/stack-local.sh reset",
+    "stack:local:status": "bash scripts/stack-local.sh status"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.16",

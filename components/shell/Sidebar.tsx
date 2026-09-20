@@ -139,14 +139,9 @@ export function SidebarContent({
           // fica com uma moldura branca de sobra. Troca aceita: pior caso
           // "moldura desnecessária" é sempre melhor que pior caso "logo
           // invisível".
-          <div className="rounded-md dark:bg-white dark:px-2 dark:py-1 dark:shadow-sm">
-            {/* <img> em vez de next/image de propósito: a URL vem de quem hospeda
-              (banco ou .env), e next/image exige allowlist de domínios fechada em
-              build — a imagem pré-buildada rejeitaria o domínio do self-hoster.
-              Altura fixa e largura livre porque a arte enviada tem proporção
-              desconhecida; forçar as duas distorceria o logo de quem configurou. */}
+          <div className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logo} alt={nome} className="h-7 w-auto max-w-[10rem] object-contain" />
+            <img src={logo} alt={nome} className="h-10 w-auto max-w-[14rem] object-contain" />
           </div>
         ) : marcaDoProduto ? (
           // O desenho do produto, inline (ver `components/branding/MarcaDoProduto.tsx`):

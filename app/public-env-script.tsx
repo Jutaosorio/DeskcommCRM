@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { env } from "@/lib/env";
+import { exigirUrlLocalDoSupabase } from "@/lib/local-stack/urls";
 
 /**
  * Injeta a config pública do Supabase em runtime, antes do JS da app rodar.
@@ -56,9 +57,14 @@ export async function PublicEnvScript({
 }) {
   await headers();
 
+  if (env.NEXT_PUBLIC_LOCAL_STACK === "1") {
+    exigirUrlLocalDoSupabase(env.NEXT_PUBLIC_SUPABASE_URL);
+  }
+
   const payload = JSON.stringify({
     NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_LOCAL_STACK: env.NEXT_PUBLIC_LOCAL_STACK,
     // Exposto pro Sentry do browser respeitar o opt-out (SENTRY_DSN=off) em runtime,
     // sem rebuild. DSN não é segredo. Ver lib/sentry/dsn.ts.
     SENTRY_DSN: env.SENTRY_DSN,

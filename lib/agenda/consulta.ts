@@ -1,4 +1,5 @@
 import { googleRpc } from "./google/sync-store";
+import { lerCorposDoLembrete } from "./lembretes";
 /**
  * OS HORÁRIOS LIVRES DE UMA ORGANIZAÇÃO — a coleta, num lugar só.
  *
@@ -110,6 +111,18 @@ export interface ParametrosDaConsulta {
   ate: Date;
   /** INJETADO, como em `horariosLivres`. Relógio lido aqui dentro é o defeito que `janela-do-canal.ts` documenta. */
   agora: Date;
+  /**
+   * Um agendamento que NÃO conta como ocupação — o que está sendo REMARCADO.
+   *
+   * Ele ocupa o horário de ONDE SAI, não o de DESTINO. Sem o intervalo, o próprio
+   * compromisso já não atrapalhava a si mesmo por acaso: a janela dele não cruza a
+   * janela pedida. Com intervalo, a coleta alarga para trás/para frente e o
+   * horário de saída passa a cruzar a janela do destino — a IA remarcando para
+   * logo depois do próprio fim levava 422 `agenda_horario_indisponivel` por causa
+   * de si mesma (#1084). Quem remarca diz quem remarcar; quem só OFERECE horário
+   * (rota, ferramenta MCP) não passa nada, e a grade segue contando tudo.
+   */
+  ignorarAgendamentoId?: string;
 }
 
 export type ResultadoDaConsulta =
@@ -287,6 +300,9 @@ export async function horariosLivresDaOrg(
       donoId,
       de: new Date(params.de.getTime() - Number(tipo.buffer_before_minutes ?? 0) * MINUTO),
       ate: new Date(params.ate.getTime() + Number(tipo.buffer_after_minutes ?? 0) * MINUTO),
+      // Remarcar: o compromisso de saída não é ocupação do destino (#1084). A
+      // janela alargada acima é justamente o que o fazia parecer um vizinho.
+      ignorarAgendamentoId: params.ignorarAgendamentoId,
     }),
   ]);
 
@@ -781,6 +797,12 @@ export interface TipoDeAtendimento {
   lembreteAntecedenciaMin: number;
   /** Degraus ADICIONAIS, somados ao principal. Vazio = um lembrete só. */
   lembreteDegrausExtras: number[];
+  /** Texto próprio do lembrete principal. null = a frase padrão do cron. */
+  lembreteMensagem: string | null;
+  /** Texto de cada extra, chave = minutos antes. Vazio = nenhum extra tem texto próprio. */
+  lembreteMensagens: Record<string, string>;
+  /** Preço padrão em centavos, ou null quando o negócio digita na hora. */
+  precoPadraoCents: number | null;
 }
 
 export type ResultadoDosTipos =
@@ -810,7 +832,7 @@ export async function listaTiposDeAtendimento(
   let q = supabase
     .from("calendar_event_types")
     .select(
-      "id, name, slug, description, category, duration_minutes, location_kind, location_details, requires_confirmation, is_active, default_owner_user_id, buffer_before_minutes, buffer_after_minutes, minimum_notice_minutes, booking_window_days, reminder_enabled, reminder_minutes_before, reminder_extra_offsets_minutes",
+      "id, name, slug, description, category, duration_minutes, location_kind, location_details, requires_confirmation, is_active, default_owner_user_id, buffer_before_minutes, buffer_after_minutes, minimum_notice_minutes, booking_window_days, reminder_enabled, reminder_minutes_before, reminder_extra_offsets_minutes, reminder_body, reminder_bodies, default_price_cents",
     )
     // Service role bypassa a RLS: este filtro é a única proteção no caminho da
     // ferramenta MCP (ver o cabeçalho do arquivo).
@@ -851,6 +873,14 @@ export async function listaTiposDeAtendimento(
       lembreteDegrausExtras: Array.isArray(t.reminder_extra_offsets_minutes)
         ? t.reminder_extra_offsets_minutes.map(Number)
         : [],
+      lembreteMensagem: t.reminder_body === null || t.reminder_body === undefined
+        ? null
+        : String(t.reminder_body),
+      lembreteMensagens: lerCorposDoLembrete(t.reminder_bodies),
+      precoPadraoCents:
+        t.default_price_cents === null || t.default_price_cents === undefined
+          ? null
+          : Number(t.default_price_cents),
     })),
   };
 }

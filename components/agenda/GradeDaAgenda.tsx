@@ -714,6 +714,18 @@ function VisaoDeMes({
                     <div
                       key={c.id}
                       data-testid={`chip-mes-${c.id}`}
+                      // A MESMA identidade que o bloco da semana carrega.
+                      //
+                      // Desde que a ocupação do Google passou a ser lida por
+                      // `fn_agenda_ocupacao_google_do_dono`, ela não tem id de
+                      // compromisso: o `c.id` daqui é DERIVADO (dono + fatia
+                      // visível), então não há como apontar para o chip por
+                      // fora. O bloco da semana já resolvia isso com a origem;
+                      // o chip do mês não a carregava, e sobrava apontá-lo pelo
+                      // rótulo "Ocupado" — que é justamente o que a spec
+                      // AFIRMA, e um seletor que repete a asserção não prova
+                      // nada.
+                      data-origem={c.origem}
                       className="flex items-center gap-1 rounded-sm px-1 py-0.5"
                       style={{ background: fundoDaTrilha(trilha, 14) }}
                     >

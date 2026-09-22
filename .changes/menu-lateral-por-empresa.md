@@ -11,3 +11,5 @@ Agora a empresa também escolhe: **Configurações → Empresa → Menu lateral*
 **Para quem não mexer em nada, a instalação continua exatamente como está** — a coluna nasce com o preset completo, e a leitura resolve empresa ∩ vínculo ∩ papel. As áreas essenciais continuam sempre visíveis, e isto é apresentação: não altera permissão, RLS, API nem o que cada papel alcança. Desmarcar uma área aqui apenas a esconde do menu; link, aviso e busca seguem abrindo o que o papel autoriza.
 
 Não exige ação de quem opera a instalação: a coluna entra pela atualização, sem backfill e sem tocar dado existente.
+
+Contribuição de @webtecnica (#1359).

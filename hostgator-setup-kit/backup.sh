@@ -21,9 +21,7 @@ docker run --rm postgres:17-alpine pg_dump "$(url_do_schema)" --no-owner --no-pr
 c_grn "✓ banco: $(du -h "$BACKUP_DIR/db-$ts.sql.gz" | awk '{print $1}')"
 
 step "Snapshot das sessões do WhatsApp → $BACKUP_DIR/waha-$ts.tgz"
-vol="$(dc config --volumes 2>/dev/null | grep -m1 waha-data || echo '')"
-proj="$(basename "$PROJECT_DIR" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9')"
-vol="${vol:-${proj}_waha-data}"
+vol="$(volume_waha_data)"
 docker run --rm -v "${vol}:/data:ro" -v "$BACKUP_DIR:/out" alpine:3.20 \
   tar czf "/out/waha-$ts.tgz" -C /data . 2>/dev/null \
   && c_grn "✓ sessões WhatsApp salvas" \

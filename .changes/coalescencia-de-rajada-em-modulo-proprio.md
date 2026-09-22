@@ -7,4 +7,4 @@ titulo: A janela que junta as mensagens de uma rajada ganha módulo e teste pró
 Nada muda para quem opera: as mensagens seguidas de um mesmo contato continuam virando um turno só
 do agente. O trecho que decide isso saiu de dentro do drain para um módulo com teste próprio, e o
 teste prende o comportamento de hoje — inclusive a exclusão do job em espera que evita o cliente
-ficar sem resposta quando a sessão antiga morre. Crédito: @Teowfb (ideia e medição).
+ficar sem resposta quando a sessão antiga morre. Contribuição de @webtecnica (#1394), a partir da ideia e da medição de @Teowfb (#849).

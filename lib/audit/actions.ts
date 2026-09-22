@@ -435,6 +435,15 @@ export const AUDIT_ACTIONS = [
   // O `metadata` carrega o id da conta padrão (identificador, não segredo) e um
   // booleano dizendo se o token foi trocado. O token, nem em metadata.
   "ad_insights_connection.updated",
+  // O ENDEREÇO DE CAPTURA da landing page (0381): para qual WhatsApp a rota
+  // pública manda quem clicou no botão, e com que texto. Ação separada das duas
+  // acima pelo mesmo critério delas — aqui não há credencial nenhuma, e a
+  // pergunta que esta trilha responde é "quem apontou o tráfego pago da minha
+  // organização para este número?". Trocar a linha não derruba nada: o
+  // endereço continua respondendo, os anúncios continuam rodando, e os leads
+  // simplesmente passam a chegar noutro WhatsApp — por isso o número vai no
+  // `metadata`, que é o único lugar onde a troca fica visível depois.
+  "captura_de_utm.updated",
   // Desconectar APAGA o token (a 0205 não tem `enabled`, e o porquê está no
   // cabeçalho dela). Auditada à parte de `.updated` porque some uma credencial:
   // a tela de Meta Ads para de funcionar para todo mundo da organização, e a
@@ -460,9 +469,14 @@ export const AUDIT_ACTIONS = [
   "security.mfa_exigida",
   "security.mfa_dispensada",
   "security.mfa_desativada",
-  // Havia convite no signup e ele não valia (expirado, ou emitido para outro
-  // e-mail). Não é falha de sistema: é a recusa deliberada de abrir organização
-  // nova para quem estava tentando entrar numa existente.
+  // A porta recusou o provisionamento no signup, com `motivo` no metadata. Os
+  // casos: convite que não valia (expirado, ou emitido para outro e-mail),
+  // `somente_convite` (a instalação não abre organização para quem chega sem
+  // convite) e `acesso_revogado` (a conta teve o acesso retirado — a consulta a
+  // `acessoFoiRevogado` é feita ENTRE `vinculoAtivo` e `decidirConviteDoSignup`,
+  // senão o motivo auditado sairia como convite inválido, que não é a verdade
+  // sobre o que aconteceu com quem foi revogado). Não é falha de sistema: é a
+  // recusa deliberada de abrir organização nova.
   "auth.signup_provision_recusado",
 
   // ── O teto de gasto de IA (migration 0159) ──────────────────────────────
@@ -783,6 +797,26 @@ export const AUDIT_ACTIONS = [
   "external_db_connection.deleted",
   "external_db_connection.tested",
   "external_db_connection.read",
+
+  // ── Entrada com Google (issue #1388) ────────────────────────────────────
+  // UM código para as recusas do OAuth, com `motivo` no metadata. Da partida
+  // (`signInWithGoogle`): `provedor_indisponivel` (ninguém ligou o provedor
+  // Google no projeto) e `url_ausente`. Da volta (`/auth/callback`, já depois
+  // do gate): `troca_do_code_falhou` (o verificador de PKCE não voltou, o code
+  // já foi gasto, o relógio do GoTrue passou) e `leitura_do_vinculo_falhou` (a
+  // sessão fechou, mas a leitura do vínculo não respondeu — falha fechada).
+  //
+  // As duas recusas que acontecem ANTES do gate — `error` na URL e chegada sem
+  // `code` — não escrevem auditoria, de propósito: quem chega assim ainda não
+  // provou ser dono do verificador de PKCE, e `error` é texto cru de quem
+  // chama. A doutrina é a do irmão desta rota — `app/api/v1/agenda/google/
+  // callback/route.ts` audita DEPOIS do gate, nunca antes. A tela de login diz
+  // o que aconteceu a quem chega por esses dois caminhos.
+  //
+  // A pergunta de triagem é sempre a mesma — "por que a entrada com Google não
+  // fechou para esta pessoa?" —, e ela não precisa de quatro filtros no painel
+  // para ser respondida; o que precisa estar separado é a causa, e ela está.
+  "auth.google_signin_failed",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

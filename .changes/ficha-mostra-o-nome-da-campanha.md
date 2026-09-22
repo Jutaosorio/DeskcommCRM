@@ -17,3 +17,5 @@ mostrando o que já sabia, sem apagar nada.
 
 Nada para fazer: quem já tem a conta de anúncios conectada passa a ver os nomes
 na próxima ficha que abrir.
+
+Contribuição de @rafaelbatistazz (#1387 e #1389).

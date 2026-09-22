@@ -1,16 +1,23 @@
 /**
- * AS DUAS TABELAS DE CAPTURA DE CLIQUE DO GOOGLE ADS SÃO SERVER-SIDE ONLY.
+ * AS QUATRO TABELAS DE CAPTURA DE CLIQUE SÃO SERVER-SIDE ONLY.
  *
  * Irmã declarada de `credencial-de-anuncios-e-server-side.test.ts` (o molde) e
  * de `credencial-do-google-e-server-side.test.ts`. Mesmo raciocínio, tabelas
- * diferentes: `google_ads_landing_pages` guarda para qual WhatsApp e com qual
- * texto a landing page redireciona; `google_ads_click_refs` guarda o `gclid`
- * de cada clique e o token que o liga à mensagem — os dois não são segredo no
- * sentido de token de API, mas são dado comercial da organização (o `gclid`
- * identifica o clique pago de um cliente específico), e nenhuma tela lê isto
- * pelo client de sessão: quem lê é o servidor, com o admin client, filtrando
- * `organization_id` à mão (`lib/plataformas-de-anuncio/google/landing-config.ts`
- * e `captura-de-clique.ts`).
+ * diferentes: as `*_landing_pages` guardam para qual WhatsApp e com qual texto
+ * a captura redireciona; as `*_click_refs` guardam o que foi capturado (o
+ * `gclid` do clique pago, no eixo do Google Ads; as UTMs da página, no da
+ * Meta) e o token curto que liga aquilo à mensagem. Nenhuma das quatro é
+ * segredo no sentido de token de API, mas todas são dado comercial da
+ * organização — o `gclid` identifica o clique pago de um cliente específico, e
+ * a UTM diz em que campanha a organização gasta —, e nenhuma tela as lê pelo
+ * client de sessão: quem lê é o servidor, com o admin client, filtrando
+ * `organization_id` à mão (`lib/plataformas-de-anuncio/landing-config.ts` e
+ * `captura-de-clique.ts`).
+ *
+ * O arquivo nasceu com as duas tabelas da 0306 e o nome falava só do Google; a
+ * 0381 acrescentou o par da Meta com o MESMO desenho, e a escolha aqui foi
+ * medir as quatro no mesmo `describe.each` em vez de abrir um segundo arquivo
+ * quase idêntico — a régua é a mesma, e duas cópias dela divergiriam.
  *
  * Por que estas tabelas NÃO estão em `rls-isolation.test.ts`: a ausência é
  * deliberada, pelo mesmo motivo do molde — RLS ligada, zero policies, grants
@@ -27,8 +34,13 @@ import { join } from "node:path";
 
 import { motivoDoErro, sql } from "./psql-transporte";
 
-/** As duas tabelas da migration 0306. */
-const TABELAS = ["google_ads_landing_pages", "google_ads_click_refs"] as const;
+/** As duas tabelas da migration 0306 e as duas da 0381. */
+const TABELAS = [
+  "google_ads_landing_pages",
+  "google_ads_click_refs",
+  "meta_ads_landing_pages",
+  "meta_ads_click_refs",
+] as const;
 
 function erroSob(papel: string, comando: string): string | null {
   try {

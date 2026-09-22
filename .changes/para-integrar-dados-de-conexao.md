@@ -20,3 +20,5 @@ painel do provedor nem reler a documentação:
   serve para fora — para outro CRM usar o mesmo número, ele conecta por uma
   sessão própria (novo QR). O painel explica isso e alerta sobre resposta
   duplicada se os dois tiverem atendimento automático.
+
+Trabalho de @vgamkt, recortado do PR #1130.

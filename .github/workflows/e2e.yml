@@ -719,6 +719,7 @@ jobs:
       # Se um dia uma spec de follow-up entrar na PARTE_1 com nome depois de
       # `relogio-`, é aqui que se olha: ou ela vai para a PARTE_2, ou esta vai.
       SPECS_PARTE_2: >-
+        protecao-de-envio-nao-congela-o-padrao.spec.ts
         agente-marca-consulta.spec.ts
         agenda-marcar-pela-tela.spec.ts
         agenda-remarcar-e-cancelar.spec.ts
@@ -1051,6 +1052,7 @@ jobs:
       SPECS_PARTE_5: >-
         inbox-busca-e-filtros-dizem-a-verdade.spec.ts
         extensoes-da-instalacao.spec.ts
+        admin-credencial-google.spec.ts
         agenda-primeira-pintura-no-fuso.spec.ts
         agenda-portao-de-hidratacao.spec.ts
         qa-l12-inbox.spec.ts

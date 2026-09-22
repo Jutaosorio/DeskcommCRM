@@ -28338,6 +28338,68 @@ alter table public.google_ads_click_refs enable row level security;
 revoke all on public.google_ads_click_refs from anon, authenticated;
 grant select, insert, update, delete on public.google_ads_click_refs to service_role;
 
+-- ---- Meta: ref curto que carrega as UTMs da landing page (migration 0381) ----
+-- Espelho da captura do Google Ads acima, para o caso que falta: a página com
+-- botão de WhatsApp. O link `wa.me` não fala com o CRM (abre o app no aparelho
+-- da pessoa), então a origem tem de viajar dentro do TEXTO da mensagem. O
+-- contrato `[dk1:<base64url>]` já fazia isso sem servidor e continua valendo;
+-- estas tabelas trocam os ~200 caracteres de base64 visíveis para o lead — e o
+-- script que quem monta a página precisaria colar — por `[ref:XXXXXX]` e um
+-- endereço do próprio CRM. Mesmo desenho server-side-only da 0306: RLS ligada
+-- sem policies, grants de anon/authenticated revogados.
+
+create table if not exists public.meta_ads_landing_pages (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  whatsapp_e164 text not null,
+  message_template text not null default 'Olá! Vim pelo site. [ref:{token}]',
+  enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by uuid,
+  constraint meta_ads_landing_pages_template_tem_placeholder
+    check (message_template like '%{token}%')
+);
+
+comment on table public.meta_ads_landing_pages is
+  'Configuração do redirecionamento de captura de UTM, por organização: para qual WhatsApp e com qual texto pré-preenchido a rota pública manda quem clicou no botão da landing page. Server-side only.';
+comment on column public.meta_ads_landing_pages.message_template is
+  'Precisa conter o literal {token}: é onde o ref do clique é injetado antes do redirect para o wa.me.';
+
+alter table public.meta_ads_landing_pages enable row level security;
+revoke all on public.meta_ads_landing_pages from anon, authenticated;
+grant select, insert, update, delete on public.meta_ads_landing_pages to service_role;
+
+drop trigger if exists trg_meta_ads_landing_pages_updated_at on public.meta_ads_landing_pages;
+create trigger trg_meta_ads_landing_pages_updated_at
+  before update on public.meta_ads_landing_pages
+  for each row execute function public.fn_set_updated_at();
+
+create table if not exists public.meta_ads_click_refs (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  token text not null,
+  utm jsonb not null,
+  query_raw jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  matched_at timestamptz,
+  contact_id uuid references public.contacts(id) on delete set null,
+  constraint meta_ads_click_refs_utm_nao_vazio check (utm <> '{}'::jsonb)
+);
+
+create unique index if not exists meta_ads_click_refs_org_token_uk
+  on public.meta_ads_click_refs (organization_id, token);
+
+comment on table public.meta_ads_click_refs is
+  'Par ref curto ↔ UTM, criado quando a rota pública recebe o clique do botão da landing page e consultado quando a mensagem do WhatsApp chega com o ref no texto. Server-side only, mesmo desenho de google_ads_click_refs (0306).';
+comment on column public.meta_ads_click_refs.utm is
+  'Só as chaves de CHAVES_DE_UTM, já normalizadas — o que não é chave de campanha não atravessa.';
+comment on column public.meta_ads_click_refs.matched_at is
+  'Carimbado no match com a mensagem recebida. Um clique só casa uma vez: a UPDATE que o faz é condicional a matched_at is null.';
+
+alter table public.meta_ads_click_refs enable row level security;
+revoke all on public.meta_ads_click_refs from anon, authenticated;
+grant select, insert, update, delete on public.meta_ads_click_refs to service_role;
+
 -- ---- Google Ads: credencial de conversão (migration 0307) ----
 -- Refresh token OAuth (não access token longo-vivo) + os três identificadores
 -- que dizem para onde reportar dentro da conta. Mesmo desenho server-side-only
@@ -35424,6 +35486,20 @@ drop trigger if exists trg_ad_hierarchy_cache_updated_at on public.ad_hierarchy_
 create trigger trg_ad_hierarchy_cache_updated_at
   before update on public.ad_hierarchy_cache
   for each row execute function public.fn_set_updated_at();
+
+-- ---- Link da mídia salvo no modelo (migration 0382) ----
+-- Valores que o operador salvou para reaproveitar em todo disparo do modelo,
+-- chaveados como template_values. Só link de mídia. Sobrevive à sincronização,
+-- que não lista esta coluna no upsert. Ver o cabeçalho da migration 0382.
+alter table public.meta_templates
+  add column if not exists saved_values jsonb not null default '{}'::jsonb;
+alter table public.meta_templates
+  drop constraint if exists meta_templates_saved_values_objeto;
+alter table public.meta_templates
+  add constraint meta_templates_saved_values_objeto
+  check (jsonb_typeof(saved_values) = 'object');
+comment on column public.meta_templates.saved_values is
+  'Valores que o operador salvou para reaproveitar em todo disparo deste modelo, chaveados como template_values (slotKey: header:1, button0:1). Só link de mídia: a rota de escrita recusa valor de texto, que costuma ser dado de pessoa. Sobrevive à sincronização, que não lista esta coluna no upsert.';
 
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --

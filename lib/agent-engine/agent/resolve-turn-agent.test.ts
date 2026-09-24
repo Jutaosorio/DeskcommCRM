@@ -125,6 +125,33 @@ describe('resolveTurnAgent', () => {
     expect(loadPublishedAgentConfigById).toHaveBeenCalledWith({}, 'org-1', 'agent-vendas');
   });
 
+  it('roteiro do membro: começa na intenção casada agora, nunca no sticky', async () => {
+    const comRoteiro = [
+      { ...members[0]!, flowPointerId: 'roteiro-vendas' },
+      { ...members[1]!, flowPointerId: 'roteiro-suporte' },
+    ];
+    const loadPublishedAgentConfigById = idAwareLoader();
+    const classificado = await resolveTurnAgent({} as never, {} as never,
+      { ...baseInput, signal: 'quanto custa?', stickyAgentId: null, stickyIntent: null },
+      makeDeps({
+        loadActiveRouter: vi.fn().mockResolvedValue(router({ sticky: false, members: comRoteiro })),
+        classifyIntent: vi.fn().mockResolvedValue({ intentName: 'vendas', confidence: 0.9 }),
+        loadPublishedAgentConfigById,
+      }));
+    expect(classificado.outcome).toBe('classified');
+    expect(classificado.flowPointerId).toBe('roteiro-vendas');
+
+    const sticky = await resolveTurnAgent({} as never, {} as never,
+      { ...baseInput, signal: 'e o preço?', stickyAgentId: 'agent-vendas', stickyIntent: 'vendas' },
+      makeDeps({
+        loadActiveRouter: vi.fn().mockResolvedValue(router({ members: comRoteiro })),
+        classifyIntent: vi.fn().mockResolvedValue({ intentName: 'vendas', confidence: 0.9 }),
+        loadPublishedAgentConfigById,
+      }));
+    expect(sticky.outcome).toBe('sticky');
+    expect(sticky.flowPointerId).toBeNull();
+  });
+
   it('4. sticky + intenção diferente com confiança >= min → reclassified, troca de agente', async () => {
     const r = router();
     const loadActiveRouter = vi.fn().mockResolvedValue(r);
@@ -347,7 +374,13 @@ describe('resolveConversationTurn — contexto curto do classificador', () => {
     const db = fakeDb(null, []);
     const { classifyIntent, deps: d } = deps();
     await resolveConversationTurn(db as never, {} as never, { ...baseInput, inbound: false }, d);
-    expect(db.query).toHaveBeenCalledOnce();
+    // Afirma o que o título promete — nenhuma leitura de `messages`, nem a do
+    // signal nem a do contexto — em vez de CONTAR consultas. A contagem era um
+    // atalho que media o resto do turno junto: o degrau 0 de campanha (#1392)
+    // lê `campaign_recipients` em todo turno, por projeto, e derrubou este caso
+    // sem que nada do que ele guarda tivesse mudado. A forma abaixo é a mesma
+    // do caso de mídia, logo adiante.
+    expect(db.query.mock.calls.some(([q]) => q.includes('from messages'))).toBe(false);
     expect(classifyIntent).not.toHaveBeenCalled();
   });
 

@@ -129,6 +129,18 @@ describe("GET /auth/callback", () => {
     expect(vi.mocked(ensureTenantForUser)).not.toHaveBeenCalled();
   });
 
+  it("conta nova sem convite em instalação com_aprovacao: vai pedir a empresa, sem provisionar", async () => {
+    // Recorte do PR #714 (migration 0383). A empresa nasce só na aprovação do
+    // administrador da instalação; a volta do Google não pode ser o atalho.
+    const { GET } = await comSupabase({ troca: { data: { user: USUARIO }, error: null } });
+    vi.mocked(modoDeCadastro).mockResolvedValue("com_aprovacao");
+
+    const res = await GET(requisicao("code=abc"));
+
+    expect(destino(res)).toBe("/get-started");
+    expect(vi.mocked(ensureTenantForUser)).not.toHaveBeenCalled();
+  });
+
   it("convite que não vale: falha FECHADA — não provisiona e diz o motivo", async () => {
     const { GET } = await comSupabase({ troca: { data: { user: USUARIO }, error: null } });
     vi.mocked(decidirConviteDoSignup).mockReturnValue({

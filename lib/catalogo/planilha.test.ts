@@ -16,7 +16,8 @@ const DICIONARIO_FAKE: Record<string, string> = {
   "preço não reconhecido (": "PRECIO NO RECONOCIDO (",
   " — escreva assim: 5.499,00": " — ESCRÍBALO ASÍ: 5.499,00",
   "custo não reconhecido (": "COSTO NO RECONOCIDO (",
-  "código repetido na planilha (": "CÓDIGO REPETIDO EN LA PLANILLA (",
+  'código repetido na planilha ("{codigo}") — já está na linha {linha}':
+    'CÓDIGO REPETIDO EN LA PLANILLA ("{codigo}") — YA ESTÁ EN LA FILA {linha}',
 };
 const gritar = (texto: string): string => DICIONARIO_FAKE[texto] ?? texto;
 
@@ -44,7 +45,14 @@ describe("lerPlanilha — mensagens de erro passam por t()", () => {
     const csv = "codigo,nome,preco\nDUP,Um,10.00\nDUP,Dois,20.00\n";
     const resultado = lerPlanilha(csv, gritar);
     if ("erro" in resultado) throw new Error("não deveria ser erro de planilha inteira");
-    expect(resultado.erros[0]!.motivo).toBe('CÓDIGO REPETIDO EN LA PLANILLA ("DUP")');
+    expect(resultado.erros[0]!.motivo).toBe('CÓDIGO REPETIDO EN LA PLANILLA ("DUP") — YA ESTÁ EN LA FILA 2');
+  });
+
+  it("código repetido sem função t sai inteiro em português, com a linha da primeira ocorrência", () => {
+    const csv = "codigo,nome,preco\nDUP,Um,10.00\nDUP,Dois,20.00\n";
+    const resultado = lerPlanilha(csv);
+    if ("erro" in resultado) throw new Error("não deveria ser erro de planilha inteira");
+    expect(resultado.erros[0]!.motivo).toBe('código repetido na planilha ("DUP") — já está na linha 2');
   });
 
   it("sem função t: comportamento idêntico ao de antes (degrada para o texto original)", () => {

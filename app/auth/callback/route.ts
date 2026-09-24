@@ -209,7 +209,8 @@ export async function GET(request: NextRequest) {
   // A trava da política de cadastro, depois de `decidirConviteDoSignup` de
   // propósito: quem tem convite válido já saiu acima, então esta guarda só
   // alcança quem chegou sem convite nenhum.
-  if ((await modoDeCadastro()) === "so_convite") {
+  const modo = await modoDeCadastro();
+  if (modo === "so_convite") {
     await audit({
       action: "auth.signup_provision_recusado",
       actorUserId: usuario.id,
@@ -218,6 +219,12 @@ export async function GET(request: NextRequest) {
     });
     return redirectTo("/login?error=cadastro_por_convite");
   }
+
+  // COM APROVAÇÃO (migration 0383): a empresa NÃO nasce aqui. O pedido é
+  // enviado em `/get-started`, que é onde já chega quem ficou sem empresa por
+  // qualquer outro caminho — uma porta só, e a trava mora na action dela
+  // (`recoverOrganization`), não nesta rota.
+  if (modo === "com_aprovacao") return redirectTo("/get-started");
 
   try {
     await ensureTenantForUser(usuario, { source: "signup" });

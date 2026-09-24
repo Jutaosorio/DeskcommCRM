@@ -71,6 +71,10 @@ services:
       WHATSAPP_HOOK_HMAC: ${WAHA_HMAC_SECRET}
       WHATSAPP_DEFAULT_ENGINE: NOWEB
       WAHA_DASHBOARD_ENABLED: "true"
+      WAHA_DASHBOARD_USERNAME: admin
+      WAHA_DASHBOARD_PASSWORD: deskcomm2026
+      WHATSAPP_SWAGGER_USERNAME: admin
+      WHATSAPP_SWAGGER_PASSWORD: deskcomm2026
       WHATSAPP_RESTART_ALL_SESSIONS: "True"
     volumes:
       - waha-data:/app/.sessions
@@ -103,10 +107,31 @@ services:
     networks:
       - internal
 
+  wacalls:
+    image: ${WACALLS_IMAGE:-ghcr.io/jotadev66/wacalls@sha256:9ff52ef9455cf42125a911c38bb8c855f0cc205516cada2054e5c05546909022}
+    pull_policy: missing
+    restart: unless-stopped
+    environment:
+      WACALLS_ADMIN_USER: ${WACALLS_ADMIN_USER:-admin}
+      WACALLS_ADMIN_PASSWORD: ${WACALLS_ADMIN_PASSWORD:-deskcomm2026}
+      WACALLS_API_TOKEN: ${WACALLS_API_TOKEN}
+      WACALLS_CORS_ORIGINS: ""
+      WACALLS_TRUSTED_PROXIES: ""
+      WACALLS_PUBLIC_IP: ${WACALLS_PUBLIC_IP:-127.0.0.1}
+      WACALLS_WEBRTC_UDP_PORT: ${WACALLS_WEBRTC_UDP_PORT:-7881}
+    ports:
+      - "${WACALLS_WEBRTC_UDP_PORT:-7881}:${WACALLS_WEBRTC_UDP_PORT:-7881}/udp"
+    volumes:
+      - wacalls-data:/data
+    networks:
+      - internal
+
 volumes:
   waha-data:
   waha-media:
+  wacalls-data:
 
 networks:
   internal:
     driver: bridge
+

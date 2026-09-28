@@ -96,6 +96,17 @@ export const sendMessageSchema = z
      * o vocabulário do canal, que é justamente o que o seam existe para evitar.
      */
     reply_to_message_id: z.string().uuid().optional(),
+    /**
+     * Quem DECIDIU este envio, quando quem aperta é um token (#1613).
+     *
+     * O token é da organização, não de uma pessoa: sem este campo, a conversa
+     * perde que foi Fulano — do ERP, da agenda, do sistema de cobrança — que
+     * mandou a mensagem. O campo só CHEGA até o insert se a rota o validar
+     * (escopo `messages:on_behalf` no token + membro ativo desta org com papel
+     * de atendente ou acima): quem valida é a rota, porque o escopo mora na
+     * linha do token e o membership, no banco.
+     */
+    on_behalf_of_user_id: z.string().uuid().optional(),
   })
   .refine(
     (d) => {
@@ -315,6 +326,14 @@ export const listConversationsQuerySchema = z.object({
   assigned_to: z.union([z.string().uuid(), z.literal("me"), z.literal("unassigned")]).optional(),
   channel_session_id: z.string().uuid().optional(),
   tag: conversationTagSchema.optional(),
+  /**
+   * A aba "Grupos" do inbox (Task 10). `"true"`/`"false"` como STRING — vem de
+   * `searchParams`, que só conhece texto — e não `z.coerce.boolean()`, que
+   * transformaria QUALQUER string não-vazia (inclusive `"false"`) em `true`.
+   * Ausente = sem filtro, a lista mostra tudo, como hoje; presente decide o
+   * `.eq("is_group", …)` no handler.
+   */
+  is_group: z.enum(["true", "false"]).optional(),
   /**
    * Só as que têm mensagem não lida para o dono.
    *

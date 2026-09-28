@@ -89,7 +89,7 @@ const SELECT_COLS = `
   last_outbound_at, last_message_at, last_message_preview,
   unread_count_for_assignee, is_group, group_chat_id, tags, metadata,
   snooze_until, created_at, updated_at,
-  bot_silenced_until, last_handoff_at,
+  bot_silenced_until, last_handoff_at, last_handoff_reason,
   comando_da_conversa,
   contacts:contact_id (id, display_name, name, phone_number, is_anonymized, tags, is_blocked, avatar_storage_path, force_human),
   channel_sessions:channel_session_id (phone_number, display_name, provider, social_platform:metadata->>social_platform)
@@ -197,6 +197,11 @@ export async function listConversationsHandler(
     query = query.not("status", "in", `(${CONVERSATION_TERMINAL_STATUSES.join(",")})`);
   }
   if (q.channel_session_id) query = query.eq("channel_session_id", q.channel_session_id);
+  // A aba "Grupos" (Task 10). `undefined` (ausente) = sem filtro, a lista
+  // mostra tudo, como hoje — checagem explícita contra `undefined`, e não
+  // `if (q.is_group)`, porque `"false"` é um valor válido e verdadeiro-truthy
+  // como string.
+  if (q.is_group !== undefined) query = query.eq("is_group", q.is_group === "true");
   // ⚠️ O MARCADOR FILTRADO É O DA CONVERSA **OU** O DO CONTATO.
   //
   // Era só `conversations.tags`, e o relato mede o buraco: *"adicionei a tag nele

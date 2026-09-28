@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { exigirUrlLocalDoSupabase, urlDoSupabaseEhLocal } from "@/lib/local-stack/urls";
 
 const raiz = process.cwd();
-const compose = fs.readFileSync(path.join(raiz, "docker-compose.local.yml"), "utf8");
+const compose = fs.readFileSync(path.join(raiz, "docker-compose.staging-local.yml"), "utf8");
 const controle = fs.readFileSync(path.join(raiz, "scripts/stack-local.sh"), "utf8");
 const publicEnv = fs.readFileSync(path.join(raiz, "app/public-env-script.tsx"), "utf8");
 const envExample = fs.readFileSync(path.join(raiz, ".env.example"), "utf8");

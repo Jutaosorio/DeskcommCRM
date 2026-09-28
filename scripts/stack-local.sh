@@ -10,7 +10,7 @@ ARQUIVO_ENV=".env.docker.local"
 MARCADOR=".stack-local/baseline-applied"
 # --env-file e obrigatorio: sem ele o Compose leria automaticamente .env, que
 # numa maquina de trabalho pode conter segredos e URLs de producao.
-COMPOSE=(docker compose --env-file "$ARQUIVO_ENV" --project-name deskcomm-local --profile local -f docker-compose.local.yml)
+COMPOSE=(docker compose --env-file "$ARQUIVO_ENV" --project-name deskcomm-local --profile local -f docker-compose.staging-local.yml)
 
 erro() { printf '==> %s\n' "$*" >&2; exit 1; }
 

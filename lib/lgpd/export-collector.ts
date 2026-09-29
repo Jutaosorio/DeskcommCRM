@@ -655,6 +655,27 @@ export interface ExportPayload {
     consumed_at: string | null;
     created_at: string;
   }>;
+  /**
+   * Notas internas das conversas do titular (#1863, F3) — o texto que a equipe
+   * escreveu SOBRE ele e a mídia que anexou junto. Sem FK para `contacts` (só
+   * para `conversations`), nenhuma outra leitura alcançaria a tabela; é o mesmo
+   * motivo de `conversation_drafts`. A migration 0483 redige `body`, zera
+   * `media_storage_path`/`media_mime`/`media_size_bytes` e enfileira o arquivo
+   * com o bucket `internal-media` quando ele pede anonimização — o que se apaga
+   * a pedido dele é o que se entrega a pedido dele (Art. 18 II). A mídia vem
+   * como METADADO (caminho, MIME, bytes): o export é `data.json` + `report.pdf`,
+   * e nenhum binário trafega por ele.
+   */
+  conversation_notes?: Array<{
+    id: string;
+    conversation_id: string;
+    body: string;
+    media_storage_path: string | null;
+    media_mime: string | null;
+    media_size_bytes: number | null;
+    created_at: string;
+    created_by_name: string | null;
+  }>;
   /** Propostas de campo do contato (0123), também APAGADAS na anonimização. */
   contact_field_proposals?: Array<{
     id: string;
@@ -1555,6 +1576,7 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
   const passagens: PassagemDeAtendimentoRow[] = [];
   const avisos_de_caso: AvisoDeCasoEntregaRow[] = [];
   const conversation_drafts: NonNullable<ExportPayload["conversation_drafts"]> = [];
+  const conversation_notes: NonNullable<ExportPayload["conversation_notes"]> = [];
   if (contactId) {
     const pageSize = 500;
     const refBatchSize = 100; // Mantém o filtro IN abaixo dos limites de URL dos proxies.
@@ -1702,6 +1724,31 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
           .range(offset, offset + pageSize - 1);
         if (error) throw error;
         conversation_drafts.push(...(data ?? []));
+        if (!data || data.length < pageSize) break;
+      }
+    }
+    // As NOTAS INTERNAS das conversas do titular (migration 0483) — MESMO
+    // escopo dos rascunhos, pelos mesmos ids já paginados: `conversation_notes`
+    // não tem FK para `contacts`, e sem este bloco o Art. 18 II entregaria um
+    // relatório que omita o que a equipe anotou sobre a pessoa. É a outra
+    // metade do par que `tests/unit/lgpd-exporta-o-que-redige.test.ts` deriva
+    // da fonte (a cascata 0483 passa a redigir esta tabela) e reprova quem
+    // redige e não exporta. A mídia entra como metadado — caminho, MIME e
+    // bytes — porque o export é `data.json` + `report.pdf`.
+    for (let batch = 0; batch < conversationIds.length; batch += refBatchSize) {
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await admin
+          .from("conversation_notes")
+          // Literal, sem concatenação: o supabase-js lê as colunas do TIPO da
+          // string para inferir a linha, e string montada volta como
+          // `GenericStringError` e não compila (mesma pegadinha logo acima).
+          .select("id, conversation_id, body, media_storage_path, media_mime, media_size_bytes, created_at, created_by_name")
+          .eq("organization_id", organizationId)
+          .in("conversation_id", conversationIds.slice(batch, batch + refBatchSize))
+          .order("id")
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        conversation_notes.push(...(data ?? []));
         if (!data || data.length < pageSize) break;
       }
     }
@@ -1871,6 +1918,7 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
     channel_session_groups,
     group_messages_authored,
     conversation_drafts,
+    conversation_notes,
     contact_field_proposals,
     b2b,
   };

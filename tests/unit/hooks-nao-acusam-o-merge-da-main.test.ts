@@ -80,9 +80,18 @@ const ENV_BASE: NodeJS.ProcessEnv = {
   HOME: HOME_FIXTURE,
 };
 
+const BASH =
+  process.platform === "win32" && existsSync("C:\\Program Files\\Git\\bin\\bash.exe")
+    ? "C:\\Program Files\\Git\\bin\\bash.exe"
+    : "bash";
+
 const dirAtuais: string[] = [];
 afterEach(() => {
-  while (dirAtuais.length > 0) rmSync(dirAtuais.pop()!, { recursive: true, force: true });
+  while (dirAtuais.length > 0) {
+    try {
+      rmSync(dirAtuais.pop()!, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    } catch {}
+  }
 });
 
 function git(dir: string, ...args: string[]): string {
@@ -93,7 +102,8 @@ type Saida = { rc: number; saida: string };
 
 function rodar(dir: string, hook: string, env: Record<string, string> = {}): Saida {
   try {
-    const saida = execFileSync("bash", [join(RAIZ, hook)], {
+    const hookPath = join(RAIZ, hook).replace(/\\/g, "/");
+    const saida = execFileSync(BASH, [hookPath], {
       cwd: dir,
       env: { ...ENV_BASE, ...env },
       encoding: "utf-8",
@@ -186,7 +196,7 @@ function guardSaboutado(): string {
 function rodarSaboutado(dir: string, env: Record<string, string> = {}): Saida {
   const hook = guardSaboutado();
   try {
-    const saida = execFileSync("bash", [hook], {
+    const saida = execFileSync(BASH, [hook.replace(/\\/g, "/")], {
       cwd: dir,
       env: { ...ENV_BASE, ...env },
       encoding: "utf-8",
@@ -198,7 +208,7 @@ function rodarSaboutado(dir: string, env: Record<string, string> = {}): Saida {
   }
 }
 
-describe("hooks não acusam o MERGE da main (#374)", () => {
+describe("hooks não acusam o MERGE da main (#374)", { timeout: 60000 }, () => {
   it("(a) migration que a main publicou, encenada como A, NÃO é autoria de quem commita", () => {
     const { dir } = fixture();
     trazERescreve(dir, MIG_MAIN);

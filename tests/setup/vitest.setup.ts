@@ -69,6 +69,9 @@ const PLACEHOLDERS: Record<string, string> = {
 for (const [chave, valor] of Object.entries(PLACEHOLDERS)) {
   process.env[chave] ??= valor;
 }
+// Nenhum teste unitário fala com Redis externo/Docker — evita latência de rede e timeout sob fakeTimers
+process.env.UPSTASH_REDIS_REST_URL = "";
+process.env.UPSTASH_REDIS_REST_TOKEN = "";
 
 /**
  * O placeholder falha NA HORA — sem perguntar ao DNS.

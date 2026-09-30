@@ -1,0 +1,6 @@
+interface:
+  display_name: "Atualizar o DeskcommCRM com Segurança"
+  short_description: "Sincroniza com o upstream oficial preservando alterações da Astra em 3 checkpoints"
+  default_prompt: "Use a skill deskcomm-atualizar e verifique se há atualizações do upstream para sincronizar."
+policy:
+  allow_implicit_invocation: true

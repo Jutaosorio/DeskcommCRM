@@ -203,6 +203,7 @@ cite cada um:
 | O agente responde errado, passa tudo para humano, não usa a agenda; afinar o prompt | `deskcomm-prompt`       |
 | Contribuir: corrigir bug, abrir ou atualizar PR, migration, conflito com a `main`   | `deskcomm-contribuir`   |
 | Criar extensão/plugin/módulo de nicho, ou transformar um PR de nicho em pacote      | `deskcomm-extensao`     |
+| Atualizar ou sincronizar com o upstream oficial mantendo customizações              | `deskcomm-atualizar`    |
 | Escrever ou revisar código aqui                                                     | `deskcomm-doutrina`     |
 
 O gate de arquitetura de qualquer peça que atende pessoas é a skill `sistema-vivo` (lei em

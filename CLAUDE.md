@@ -682,6 +682,7 @@ naquele clone — no Claude Code a skill GLOBAL vence a do projeto com o mesmo n
 - `deskcomm-prompt` — afinar o prompt de um agente que não performa
 - `deskcomm-contribuir` — o espelho da triagem, antes do PR; fica quieto para o mantenedor
 - `deskcomm-extensao` — criar extensão em vez de PR no núcleo: régua de destino, contrato do pacote e envio
+- `deskcomm-atualizar` — sincronizar com o upstream oficial mantendo customizações em 3 checkpoints
 - `deskcomm-doutrina` — as três regras que mais custam, antes de escrever código
 
 Os guias têm página pública em [deskcomm.com.br/guias](https://www.deskcomm.com.br/guias), escrita

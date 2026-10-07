@@ -120,15 +120,15 @@ git push origin main
    
    a. **Backup preventivo**:
    ```bash
-   bash hostgator-setup-kit/backup-db.sh 2>/dev/null || true
+   bash hostgator-setup-kit/backup.sh
    ```
    
    b. **Atualização do Banco (se houver migrations)**:
    Se foram detectadas alterações no `baseline.sql` no Checkpoint 1:
    ```bash
-   bash hostgator-setup-kit/update.sh
+   bash -c 'source hostgator-setup-kit/_common.sh && enter_project && reaplicar_baseline "$PROJECT_DIR/supabase/baseline.sql" "$PROJECT_DIR/.deskcomm-banco.log"'
    ```
-   Caso contrário (somente código/telas):
+   Em seguida:
    ```bash
    docker compose -f docker-compose.prod.yml pull
    docker compose -f docker-compose.prod.yml up -d
@@ -137,7 +137,7 @@ git push origin main
 4. **Validação de Saúde (Healthcheck)**:
    Verifique se o app respondeu HTTP 200:
    ```bash
-   curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/api/v1/health
+   curl -s -o /dev/null -w "%{http_code}" https://${DOMAIN:-127.0.0.1}/api/v1/health
    ```
    E confira os contêineres:
    ```bash
@@ -149,3 +149,11 @@ git push origin main
    - Reative imediatamente a imagem ou commit anterior.
    - Restaure os contêineres funcionais com `docker compose -f docker-compose.prod.yml up -d`.
    - Exiba os logs de erro (`docker compose logs --tail=50 app`) para diagnóstico conjunto.
+
+6. **Higienização de Backups (Política de 3 Versões)**:
+   Após validação com sucesso do healthcheck 200, mantenha apenas as **3 versões mais recentes** de backups em `backups/` para garantir pontos de recuperação seguros sem consumir espaço em disco desnecessariamente:
+   ```bash
+   # Mantém os 3 backups mais recentes de banco e waha
+   ls -t backups/db-*.sql.gz 2>/dev/null | tail -n +4 | xargs -r rm -f
+   ls -t backups/waha-*.tgz 2>/dev/null | tail -n +4 | xargs -r rm -f
+   ```

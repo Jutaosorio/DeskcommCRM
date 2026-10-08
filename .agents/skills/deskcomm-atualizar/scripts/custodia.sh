@@ -39,19 +39,28 @@ else
 fi
 
 # 3. Checagem de ativos de branding (Astra)
-c_bld "3. Checando ativos de marca em assets/branding/..."
-if [ -d "assets/branding" ] && [ "$(ls -A assets/branding 2>/dev/null | wc -l)" -gt 0 ]; then
-  c_grn "  ✓ Diretório assets/branding/ preservado com $(ls -A assets/branding | wc -l) arquivos."
+c_bld "3. Checando ativos de marca em assets/branding/ e public/branding/..."
+if [ -d "assets/branding" ] && [ "$(ls -A assets/branding 2>/dev/null | wc -l)" -gt 0 ] && \
+   [ -d "public/branding" ] && [ "$(ls -A public/branding 2>/dev/null | wc -l)" -gt 0 ]; then
+  c_grn "  ✓ Diretórios assets/branding/ e public/branding/ preservados."
 else
-  c_ylw "  ⚠ Aviso: Diretório assets/branding/ não encontrado ou vazio."
+  c_red "  ✗ ERRO: Ativos de marca da Astra ausentes em assets/branding/ ou public/branding/!"
+  FALHAS=$((FALHAS + 1))
 fi
 
-# 4. Checagem de configurações locais / compose
-c_bld "4. Checando docker-compose.prod.yml..."
+# 4. Checagem de configurações locais / compose / env
+c_bld "4. Checando docker-compose.prod.yml e integridade do ambiente..."
 if [ -f "docker-compose.prod.yml" ]; then
   c_grn "  ✓ docker-compose.prod.yml está presente e intacto."
 else
   c_red "  ✗ ERRO: docker-compose.prod.yml ausente!"
+  FALHAS=$((FALHAS + 1))
+fi
+
+if [ -f ".env" ]; then
+  c_grn "  ✓ Arquivo de variáveis .env está presente."
+else
+  c_red "  ✗ ERRO: Arquivo .env ausente!"
   FALHAS=$((FALHAS + 1))
 fi
 

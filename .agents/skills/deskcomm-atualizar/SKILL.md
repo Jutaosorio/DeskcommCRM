@@ -12,34 +12,54 @@ Este guia conduz a sincronização do fork com o repositório oficial (`upstream
 que nenhuma customização da Astra (logos, alocação de memória no Dockerfile, configurações locais)
 seja perdida ou sobrescrita.
 
-O processo é dividido em **3 checkpoints obrigatórios** com validação humana.
+## Modos de Operação
+
+1. **Modo Avaliação (`--diff`, "o que mudou?", "só ver novidades"):**
+   - Executa a comparação entre a versão instalada e a mais recente do upstream;
+   - Exibe o resumo detalhado das novidades e alerta de migrações no banco;
+   - **Encerra sem tocar em nenhuma branch nem alterar nada na VPS.**
+
+2. **Modo Atualização Inteligente (Aprovação Única no Início):**
+   - Uma vez autorizada a atualização no Checkpoint 1, o agente executa o fluxo completo de ponta a ponta;
+   - **Pausa Automática em caso de falha:** Se o teste de custódia (`custodia.sh`) encontrar qualquer conflito ou falha nos testes de marca e código, o processo **pausa imediatamente na branch sync**, sem tocar na `main` e sem fazer push no GitHub, trazendo o diagnóstico para resolução humana.
 
 ---
 
-## Os 3 Checkpoints
+## Os Checkpoints do Fluxo
 
 ```
-[Início]
-   │
-   ▼
-[1. Checagem Upstream] ──► CHECKPOINT 1: Resumo das Novidades (Autoriza preparar?)
-                                │ (Sim)
-                                ▼
-[2. Branch sync & Merge] ──► Testes de Custódia Astra & Integridade
-                                │
-                                ▼
-                             CHECKPOINT 2: Pós-Merge Validado (Autoriza push na main?)
-                                │ (Sim)
-                                ▼
-[3. GitHub Actions Build] ──► 4 Imagens publicadas no GHCR
-                                │
-                                ▼
-                             CHECKPOINT 3: Imagens Prontas (Autoriza deploy na VPS?)
-                                │ (Sim)
-                                ▼
-[4. Backup + Deploy VPS] ──► Healthcheck 200 OK?
-                                ├── Sim ──► ✓ Atualização Concluída!
-                                └── Não ──► ⚠ Rollback Automático e Exibição de Logs
+[Início / --diff] ──► Exibe Resumo de Novidades & Alerta de Banco
+                             │
+                             ▼
+                    Autoriza Atualizar?
+                             ├── Não ──► Encerra sem alterar nada
+                             └── Sim ──► Executa Fluxo Inteligente
+                                          │
+                                          ▼
+                             [Branch sync & Merge Upstream]
+                                          │
+                                          ▼
+                             [Trava de Custódia Astra & Testes]
+                                          ├── Falha ──► ⏸ PAUSA OBRIGATÓRIA (Reporta ao usuário)
+                                          └── Sucesso
+                                               │
+                                               ▼
+                             [Merge na main & Push GitHub]
+                                          │
+                                          ▼
+                             [Monitoramento Silencioso do Build GHCR]
+                                          │
+                                          ▼
+                             [Backup Preventivo (3 versões)]
+                                          │
+                                          ▼
+                             [Migrações no Banco Supabase]
+                                          │
+                                          ▼
+                             [Deploy na VPS Hostinger & Healthcheck 200]
+                                          │
+                                          ▼
+                             ✓ Atualização Concluída com Sucesso!
 ```
 
 ---

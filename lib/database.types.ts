@@ -3750,6 +3750,7 @@ export type Database = {
           position: number
           reminder_body: string | null
           reminder_bodies: Json
+          reminder_channel_session_id: string | null
           reminder_enabled: boolean
           reminder_minutes_before: number
           reminder_extra_offsets_minutes: number[]
@@ -3779,6 +3780,7 @@ export type Database = {
           position?: number
           reminder_body?: string | null
           reminder_bodies?: Json
+          reminder_channel_session_id?: string | null
           reminder_enabled?: boolean
           reminder_minutes_before?: number
           reminder_extra_offsets_minutes?: number[]
@@ -3808,6 +3810,7 @@ export type Database = {
           position?: number
           reminder_body?: string | null
           reminder_bodies?: Json
+          reminder_channel_session_id?: string | null
           reminder_enabled?: boolean
           reminder_minutes_before?: number
           reminder_extra_offsets_minutes?: number[]
@@ -7398,6 +7401,7 @@ export type Database = {
           due_at: string
           emergency: boolean
           error_message: string | null
+          export_claimed_at: string | null
           external_customer_id: string | null
           id: string
           organization_id: string
@@ -7419,6 +7423,7 @@ export type Database = {
           due_at: string
           emergency?: boolean
           error_message?: string | null
+          export_claimed_at?: string | null
           external_customer_id?: string | null
           id?: string
           organization_id: string
@@ -7440,6 +7445,7 @@ export type Database = {
           due_at?: string
           emergency?: boolean
           error_message?: string | null
+          export_claimed_at?: string | null
           external_customer_id?: string | null
           id?: string
           organization_id?: string
@@ -10605,6 +10611,7 @@ export type Database = {
         Returns: Json
       }
 
+      fn_resolver_avisos_de_lembrete_expirados: { Args: Record<PropertyKey, never>; Returns: number }
       fn_support_context: { Args: Record<PropertyKey, never>; Returns: Json }
       fn_support_write_allowed: { Args: { p_org: string }; Returns: boolean }
       fn_support_storage_write_allowed: { Args: { p_name: string }; Returns: boolean }

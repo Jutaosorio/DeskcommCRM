@@ -43,3 +43,19 @@
 		reverse_proxy app:3000
 	}
 }
+
+# WhatsApp MCP Reports: served here because this Caddy owns ports 80 and 443.
+# Upstreams are the MCP Servers in /opt/whatsapp-mcp-reports (network alias on deskcommcrm_internal).
+mcp.juta-os.com {
+	handle_path /pessoal/* {
+		reverse_proxy wpp-alpha-mcp:8090
+	}
+
+	handle_path /trabalho/* {
+		reverse_proxy wpp-beta-mcp:8090
+	}
+
+	handle {
+		respond "Not found" 404
+	}
+}

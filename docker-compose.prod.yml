@@ -95,7 +95,12 @@ services:
     # O teto não impede o pico legítimo; impede que UM serviço leve a máquina
     # inteira. Estourá-lo mata só quem estourou, e o `restart: unless-stopped`
     # o traz de volta — falha isolada em vez de queda geral.
-    mem_limit: 512m
+    #
+    # 2048m (fork da Astra, 19/10/2026): com 512m o Node deriva um heap de ~259 MB
+    # e o worker caiu 14 vezes em 3 h por `JavaScript heap out of memory` na v1.85
+    # (transcrição de áudio e turnos do agente), perdendo o turno em andamento.
+    # Com 2048m o heap fica em ~1 GB.
+    mem_limit: 2048m
     # Imagem publicada — e não mais `build:` sozinho. O motivo é o modo de falha
     # que isso escondia: serviço build-only é PULADO por `docker compose pull`
     # ("Skipped - No image to be pulled") e imune a `up -d` sem `--build`. Ele era

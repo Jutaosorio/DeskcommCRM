@@ -311,14 +311,7 @@ export function ConversationListItem({
               className="object-cover"
             />
           ) : null}
-          <AvatarFallback
-            className={cn(
-              "text-xs font-medium",
-              isSelected
-                ? "bg-neutral-900/10 text-neutral-900"
-                : "bg-surface-elevated text-text-muted",
-            )}
-          >
+          <AvatarFallback className="bg-surface-elevated text-xs font-medium text-text-muted">
             {initials(displayName, phoneFallback)}
           </AvatarFallback>
         </Avatar>
@@ -338,22 +331,12 @@ export function ConversationListItem({
         {naFila && (
           <div className="mb-1 flex items-center gap-1.5">
             <span
-              className={cn(
-                "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums",
-                isSelected
-                  ? "bg-neutral-900/15 text-neutral-950"
-                  : "bg-accent-soft text-accent",
-              )}
+              className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-soft px-1 text-[10px] font-medium tabular-nums text-accent"
               aria-label={`${t("Posição")} ${queuePosition} ${t("na fila")}`}
             >
               {queuePosition}º
             </span>
-            <span
-              className={cn(
-                "text-[11px]",
-                isSelected ? "font-medium text-neutral-700" : "text-text-muted",
-              )}
-            >
+            <span className="text-[11px] text-text-muted">
               {waitingLabel(conversation, t, localeDaData)}
             </span>
           </div>
@@ -363,10 +346,8 @@ export function ConversationListItem({
             <span
               className={cn(
                 "truncate text-sm",
-                isSelected
-                  ? (unread > 0 ? "font-semibold text-neutral-950" : "font-medium text-neutral-950")
-                  : (unread > 0 ? "font-semibold text-text" : "font-medium text-text"),
-                c?.is_anonymized && (isSelected ? "font-normal italic text-neutral-700" : "font-normal italic text-text-muted"),
+                unread > 0 ? "font-semibold text-text" : "font-medium text-text",
+                c?.is_anonymized && "font-normal italic text-text-muted",
               )}
             >
               {displayName}
@@ -386,10 +367,7 @@ export function ConversationListItem({
             )}
           </span>
           <span
-            className={cn(
-              "shrink-0 text-[11px] tabular-nums",
-              isSelected ? "font-medium text-neutral-700" : "text-text-subtle",
-            )}
+            className="shrink-0 text-[11px] tabular-nums text-text-subtle"
             // O mesmo lugar da tela mostra duas coisas diferentes conforme a aba:
             // na Fila é "desde quando o cliente ESPERA" (a mensagem mais antiga sem
             // resposta — #990), nas outras é "há quanto tempo a conversa mexeu". O
@@ -410,24 +388,12 @@ export function ConversationListItem({
             )}
           >
             {isAi && mostrarAutomatico ? (
-              <Robot
-                size={12}
-                weight="duotone"
-                className={cn("mr-1 inline align-[-2px]", isSelected ? "text-neutral-800" : undefined)}
-                aria-hidden
-              />
+              <Robot size={12} weight="duotone" className="mr-1 inline align-[-2px]" aria-hidden />
             ) : null}
             {truncated}
           </p>
           {unread > 0 && (
-            <span
-              className={cn(
-                "inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold tabular-nums",
-                isSelected
-                  ? "bg-neutral-950 text-white"
-                  : "bg-accent px-1.5 text-accent-foreground",
-              )}
-            >
+            <span className="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-semibold tabular-nums text-accent-foreground">
               {unread}
             </span>
           )}
@@ -436,32 +402,13 @@ export function ConversationListItem({
         {temSelos && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1">
             {visibleTags.map((t) => (
-              <ChipDeEtiqueta
-                key={t}
-                tag={t}
-                className={cn(
-                  "h-4 px-1.5 text-[10px]",
-                  isSelected && "border-neutral-900/15 bg-neutral-900/10 text-neutral-900",
-                )}
-              />
+              <ChipDeEtiqueta key={t} tag={t} className="h-4 px-1.5 text-[10px]" />
             ))}
             {overflow > 0 && (
-              <span
-                className={cn(
-                  "text-[10px]",
-                  isSelected ? "font-medium text-neutral-800" : "text-text-muted",
-                )}
-              >
-                +{overflow}
-              </span>
+              <span className="text-[10px] text-text-muted">+{overflow}</span>
             )}
             {mostrarAtendente && comando.quem === "humano" && (
-              <OwnerBadge
-                ownerKind="user"
-                ownerName={comando.nome ?? t("Atendente")}
-                compacto
-                className={isSelected ? "[&_span]:text-neutral-900" : undefined}
-              />
+              <OwnerBadge ownerKind="user" ownerName={comando.nome ?? t("Atendente")} compacto />
             )}
             {/* #2383: `min-w-0` + `max-w` + `truncate` — o mesmo tratamento do
                 badge do cabeçalho. Uma linha de badges é `flex-wrap`, então um
@@ -471,12 +418,7 @@ export function ConversationListItem({
             {mostrarCanal && rotuloCanal && (
               <Badge
                 variant="outline"
-                className={cn(
-                  "h-4 min-w-0 max-w-[9rem] gap-1 truncate px-1.5 text-[10px] font-normal",
-                  isSelected
-                    ? "border-neutral-900/20 text-neutral-900"
-                    : "text-text-muted",
-                )}
+                className="h-4 min-w-0 max-w-[9rem] gap-1 truncate px-1.5 text-[10px] font-normal text-text-muted"
                 title={`${t("Entrou por")} ${rotuloCanal}`}
               >
                 <span className="truncate">{rotuloCanal}</span>
@@ -488,13 +430,7 @@ export function ConversationListItem({
               </Badge>
             )}
             {c?.is_anonymized && (
-              <Badge
-                variant="outline"
-                className={cn(
-                  "h-4 px-1.5 text-[10px]",
-                  isSelected ? "border-neutral-900/20 text-neutral-900" : "",
-                )}
-              >
+              <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
                 {t("Anonimizado")}
               </Badge>
             )}

@@ -94,9 +94,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
+          FORK_DA_ASTRA: ${{ github.repository != 'melgarafael/DeskcommCRM' }}
         run: |
           set -uo pipefail
-          if [ "${GITHUB_REPOSITORY}" != "melgarafael/DeskcommCRM" ]; then
+          if [ "${FORK_DA_ASTRA:-false}" = "true" ]; then
             echo "e2e=nao" >> "$GITHUB_OUTPUT"; echo "fork: pula o e2e para priorizar build de imagens"; exit 0
           fi
           if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
@@ -1172,6 +1173,7 @@ jobs:
         pausa-de-reentrada.spec.ts
         funil-arquivado-volta-pela-tela.spec.ts
         inbox-selecionada-no-escuro.spec.ts
+        inbox-anuncio-de-origem.spec.ts
         followup-builder.spec.ts
         followup-journey.spec.ts
         followup-dossie.spec.ts
@@ -2349,6 +2351,7 @@ jobs:
           PORTAO: ${{ needs.e2e-alcance.result }}
           ALCANCE: ${{ needs.e2e-alcance.outputs.e2e }}
           PARTES: ${{ needs.e2e-parte.result }}
+          FORK_DA_ASTRA: ${{ github.repository != 'melgarafael/DeskcommCRM' }}
         run: |
           set -euo pipefail
           echo "evento=${EVENTO} e2e-alcance=${PORTAO} e2e=${ALCANCE:-<vazio>}"
@@ -2361,7 +2364,7 @@ jobs:
           # Qualquer outra combinação exige `success`: parte pulada não mediu
           # nada, e ler isso como aprovação é o modo de falha que o `imagens-ok`
           # documenta.
-          if [ "${GITHUB_REPOSITORY}" != "melgarafael/DeskcommCRM" ]; then
+          if [ "${FORK_DA_ASTRA:-false}" = "true" ]; then
             echo "Fork: E2E desativado para priorizar build de imagens — partes puladas" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$EVENTO" = "pull_request" ] && [ "$ALCANCE" = "nao" ]; then
             [ "$PARTES" = "skipped" ]

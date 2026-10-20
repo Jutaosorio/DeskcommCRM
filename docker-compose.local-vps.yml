@@ -25,7 +25,7 @@ services:
       - internal
 
   worker:
-    image: ${WORKER_IMAGE:-ghcr.io/melgarafael/deskcomm-worker:stable}
+    image: ${WORKER_IMAGE:-ghcr.io/jutaosorio/deskcomm-worker:latest}
     restart: unless-stopped
     env_file: .env
     environment:
@@ -47,7 +47,7 @@ services:
       - internal
 
   scheduler:
-    image: ${SCHEDULER_IMAGE:-ghcr.io/melgarafael/deskcomm-scheduler:stable}
+    image: ${SCHEDULER_IMAGE:-ghcr.io/jutaosorio/deskcomm-scheduler:latest}
     restart: unless-stopped
     env_file: .env
     environment:

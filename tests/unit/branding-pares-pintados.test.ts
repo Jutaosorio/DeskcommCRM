@@ -332,7 +332,10 @@ describe("o bloco emitido não pode contradizer o globals.css", () => {
         );
       }
     }
-    expect(andaram).toBe(13);
+    // ASTRA (fork): o tema escuro da Astra ("Linear Dark", app/globals.css) tem
+    // superfícies mais escuras que a Sage; os números do escuro medem MAIS
+    // contraste que os do upstream. Divergência intencional — ver .astra/README.md.
+    expect(andaram).toBe(12);
   });
 });
 
@@ -352,15 +355,15 @@ describe("controle positivo — o produto sem marca não pode se mexer", () => {
     // Escuro: 6,30 e 5,22 na rampa DERIVADA da semente; os literais do
     // `globals.css` (`#82a077`) dão 6,31 e 5,23 — a rampa reproduz a Sage com
     // Δ ≤ 2/255 por canal, e a diferença de 0,01 é esse arredondamento.
-    expect(foco(p.escuro, "--color-bg")).toBeCloseTo(6.3, 2);
-    expect(foco(p.escuro, "--color-surface-elevated")).toBeCloseTo(5.22, 2);
+    expect(foco(p.escuro, "--color-bg")).toBeCloseTo(6.74, 2); // ASTRA: upstream 6,3
+    expect(foco(p.escuro, "--color-surface-elevated")).toBeCloseTo(5.92, 2); // ASTRA: upstream 5,22
     // No escuro o anel NÃO fica apertado contra as bases: quem aperta é o
     // `-soft` COMPOSTO. 4,58 aqui — é este o par que a prova em tela reportou
     // como "4,58 no escuro", e não `foco × --color-bg` (6,30). Nos literais do
     // `globals.css` o mesmo par dá 4,59, e `superficiesDoTema` documenta o trio
     // 4,99 · 4,59 · 4,02.
-    expect(foco(p.escuro, "--color-accent-soft@--color-surface")).toBeCloseTo(4.58, 2);
-    expect(foco(p.escuro, "--color-accent-soft@--color-surface-elevated")).toBeCloseTo(4.03, 2);
+    expect(foco(p.escuro, "--color-accent-soft@--color-surface")).toBeCloseTo(5.04, 2); // ASTRA: upstream 4,58
+    expect(foco(p.escuro, "--color-accent-soft@--color-surface-elevated")).toBeCloseTo(4.63, 2); // ASTRA: upstream 4,03
   });
 
   it("sem marca configurada nada é injetado, e a tela fica como está", () => {
@@ -379,8 +382,8 @@ describe("a navy #0f172a — o defeito que a prova em tela achou", () => {
     const p = pintadosDaSemente("#0f172a");
     expect(foco(p.claro, "--color-bg")).toBeCloseTo(10.77, 2);
     expect(foco(p.claro, "--color-surface-elevated")).toBeCloseTo(10.22, 2);
-    expect(foco(p.escuro, "--color-bg")).toBeCloseTo(5.28, 2);
-    expect(foco(p.escuro, "--color-surface-elevated")).toBeCloseTo(4.39, 2);
+    expect(foco(p.escuro, "--color-bg")).toBeCloseTo(5.66, 2); // ASTRA: upstream 5,28
+    expect(foco(p.escuro, "--color-surface-elevated")).toBeCloseTo(4.97, 2); // ASTRA: upstream 4,39
     for (const superficie of ["--color-bg", "--color-surface-elevated"] as const) {
       expect(foco(p.escuro, superficie), superficie).toBeGreaterThanOrEqual(PISOS.componente);
     }

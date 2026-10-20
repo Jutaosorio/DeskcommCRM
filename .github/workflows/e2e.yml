@@ -96,7 +96,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: |
           set -uo pipefail
-          if [ "${GITHUB_REPOSITORY}" != "melgarafael/DeskcommCRM" ]; then
+          if [ "${GITHUB_REPOSITORY:-melgarafael/DeskcommCRM}" != "melgarafael/DeskcommCRM" ]; then
             echo "e2e=nao" >> "$GITHUB_OUTPUT"; echo "fork: pula o e2e para priorizar build de imagens"; exit 0
           fi
           if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
@@ -2362,7 +2362,7 @@ jobs:
           # Qualquer outra combinação exige `success`: parte pulada não mediu
           # nada, e ler isso como aprovação é o modo de falha que o `imagens-ok`
           # documenta.
-          if [ "${GITHUB_REPOSITORY}" != "melgarafael/DeskcommCRM" ]; then
+          if [ "${GITHUB_REPOSITORY:-melgarafael/DeskcommCRM}" != "melgarafael/DeskcommCRM" ]; then
             echo "Fork: E2E desativado para priorizar build de imagens — partes puladas" | tee -a "$GITHUB_STEP_SUMMARY"
           elif [ "$EVENTO" = "pull_request" ] && [ "$ALCANCE" = "nao" ]; then
             [ "$PARTES" = "skipped" ]

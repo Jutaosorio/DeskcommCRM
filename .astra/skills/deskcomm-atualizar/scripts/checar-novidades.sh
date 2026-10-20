@@ -13,7 +13,7 @@
 #   4. quanto o fork diverge do upstream.
 #
 # Uso (na raiz do clone do fork, na máquina de trabalho):
-#   bash .agents/skills/deskcomm-atualizar/scripts/checar-novidades.sh [--alvo vX.Y.Z] [--instalada vX.Y.Z] [--sem-vps]
+#   bash .astra/skills/deskcomm-atualizar/scripts/checar-novidades.sh [--alvo vX.Y.Z] [--instalada vX.Y.Z] [--sem-vps]
 #
 # --alvo        compara contra essa tag do upstream (padrão: última release estável)
 # --instalada   diz a versão instalada à mão (padrão: lê a imagem do app na VPS)
@@ -62,7 +62,9 @@ git rev-parse --verify --quiet "${ALVO}^{commit}" >/dev/null || { c_red "Não ac
 # ── 2. Versão instalada: pelo commit da imagem que ROda na VPS ──────────────────
 REV=""; ORIGEM_INST=""
 if [ -z "$INSTALADA" ] && [ "$USAR_VPS" = 1 ]; then
-  REV="$(ssh -o BatchMode=yes -o ConnectTimeout=8 "$VPS_SSH" \
+  # Rodando na própria VPS o contêiner é local: o ssh para si mesma falharia.
+  REV="$(docker inspect "$VPS_APP" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null || true)"
+  [ -z "$REV" ] && REV="$(ssh -o BatchMode=yes -o ConnectTimeout=8 "$VPS_SSH" \
     "docker inspect $VPS_APP --format '{{index .Config.Labels \"org.opencontainers.image.revision\"}}'" 2>/dev/null || true)"
   [ -n "$REV" ] && git cat-file -e "${REV}^{commit}" 2>/dev/null && ORIGEM_INST="imagem do app na VPS (commit ${REV:0:9})"
 fi

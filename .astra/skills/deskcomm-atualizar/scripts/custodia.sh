@@ -4,7 +4,7 @@
 # sobreviveu? E o código ainda passa nos gates?
 #
 # Uso (na raiz do clone, JÁ na branch sync/upstream-vX.Y.Z com o merge feito):
-#   bash .agents/skills/deskcomm-atualizar/scripts/custodia.sh [--testes] [--alvo vX.Y.Z]
+#   bash .astra/skills/deskcomm-atualizar/scripts/custodia.sh [--testes] [--alvo vX.Y.Z]
 #
 # --testes   roda também typecheck + lint + test:unit (e test:shell se kit/compose
 #            mudou). O CÓDIGO DE SAÍDA é a autoridade, não o rodapé nem o grep.
@@ -105,13 +105,18 @@ if [ "$TESTES" -eq 1 ]; then
   c_bld "4. Gates do código (o exit code decide)"
   if [ ! -d node_modules ]; then
     falha "node_modules ausente: rode 'pnpm install --frozen-lockfile' antes de --testes"
+  elif [ -f .env ] || [ -f .env.local ]; then
+    # tests/setup/vitest.setup.ts carrega .env/.env.local: com o .env da produção
+    # os testes leem WAHA e chaves reais (a janela-24h falhou assim em 20/10/2026).
+    # Lugar dos testes é o clone da máquina de trabalho, sem .env — e a prova é o CI.
+    falha "há .env/.env.local nesta pasta: não rodo testes aqui (é a VPS?). Use o clone da máquina de trabalho, sem .env, ou deixe o CI da PR decidir"
   else
     rodar() {  # rodar <rótulo> <comando...>
       local rot="$1"; shift
-      "$@" > "/tmp/custodia-$rot.log" 2>&1; local rc=$?
+      "$@" < /dev/null > "/tmp/custodia-$rot.log" 2>&1; local rc=$?   # </dev/null: nenhum teste espera teclado
       if [ $rc -eq 0 ]; then ok "$rot (exit 0)"; else falha "$rot falhou (exit $rc) — ver /tmp/custodia-$rot.log"; grep -aE "^ *(Test Files|Tests|Errors) " "/tmp/custodia-$rot.log" | tail -3 | sed 's/^/      /'; fi
     }
-    rodar typecheck pnpm typecheck
+    rodar typecheck env NODE_OPTIONS=--max-old-space-size=6144 pnpm typecheck   # 4 GB não bastam
     rodar lint pnpm lint
     rodar test-unit pnpm test:unit
     if git diff --name-only "$BASE" HEAD -- hostgator-setup-kit/ 'docker-compose*.yml' 'Caddyfile*' Dockerfile | grep -q .; then

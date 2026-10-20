@@ -10,10 +10,12 @@ metadata:
 
 Sincroniza o fork com o upstream (`melgarafael/DeskcommCRM`) **sem perder o que é da Astra** e leva a versão nova à VPS.
 
-**Onde cada coisa roda**
-- **Máquina de trabalho** (clone `codigo-deskcomm`, `gh` logado): Checkpoints 1 e 2 e o push.
-- **VPS** (`ssh vps-crm`, pasta `/root/deskcommcrm`): Checkpoint 3.
-- Scripts desta skill: `.agents/skills/deskcomm-atualizar/scripts/` (espelho em `.claude/skills/`). **Edite a fonte em `.agents/`** e copie para o espelho.
+**Onde cada coisa roda** (decisão de 20/10/2026)
+- **Máquina de trabalho** (o computador do Juta, clone `Jutaosorio/DeskcommCRM`, `gh` logado, **sem `.env`**): Checkpoints 1 e 2 e o push. A VPS **não** é lugar de merge nem de suíte de testes: a pasta `/root/deskcommcrm` é a produção, o `.env` dela é real (os testes o carregam) e a suíte de 25 mil testes disputa CPU com o CRM no ar. O `jt-dev-box` fica na mesma VPS: não resolve.
+- **GitHub Actions**: a prova dos testes (divide a suíte em várias máquinas) e o build das imagens.
+- **VPS** (`ssh vps-crm`, pasta `/root/deskcommcrm`, sempre na `main`): só o Checkpoint 3.
+- Esta skill mora em `.astra/skills/deskcomm-atualizar/` (fora de `.agents/skills/`, que é do upstream e tem orçamento de descrições já esgotado pelas skills dele). Instalar num computador novo: `ln -s "$PWD/.astra/skills/deskcomm-atualizar" ~/.claude/skills/deskcomm-atualizar`.
+- Divergências intencionais da Astra que fazem teste do upstream precisar de ajuste: `.astra/README.md`. Conflito num desses arquivos = reaplicar o ajuste, nunca desfazer a customização.
 
 ## Regras de ouro (cada uma já derrubaria ou escondeu um problema)
 
@@ -46,7 +48,7 @@ Checkpoint 3 (autorização própria): antes ─► código ─► caddy-sites �
 ## Checkpoint 1 — O que há de novo (só leitura)
 
 ```bash
-bash .agents/skills/deskcomm-atualizar/scripts/checar-novidades.sh
+bash .astra/skills/deskcomm-atualizar/scripts/checar-novidades.sh
 ```
 
 Ele lê a **versão que roda de verdade** (commit da imagem do app na VPS) e a **última release estável** do upstream, e imprime o CHANGELOG das versões no meio com a seção **⚠️ Requer atenção** na íntegra, mais: migrations novas, mudança do `SUPABASE_REF`, arquivos de Caddy/compose/kit que o upstream mexeu e a lista do que o fork customiza.
@@ -74,10 +76,10 @@ Ele lê a **versão que roda de verdade** (commit da imagem do app na VPS) e a *
    - marca (`public/branding/astra-*`), componentes de inbox/kanban, stack local: ver a lista.
 3. **Custódia + gates** (pede `pnpm install --frozen-lockfile` antes):
    ```bash
-   bash .agents/skills/deskcomm-atualizar/scripts/custodia.sh --testes --alvo vX.Y.Z
+   bash .astra/skills/deskcomm-atualizar/scripts/custodia.sh --testes --alvo vX.Y.Z
    ```
-   Camada A (derivada do git): todo arquivo em que o fork difere do upstream sobreviveu ao merge? Camada B: assinaturas conhecidas (heap do Dockerfile, marca, bloco do Caddy). Com `--testes`: `typecheck`, `lint`, `test:unit` (e `test:shell` se kit/compose/Caddy/Dockerfile mudaram); **o código de saída é a autoridade**. Falhou → pare na branch de sync e traga o diagnóstico.
-4. **PR e CI antes da `main`:** `git push -u origin sync/upstream-vX.Y.Z`, `gh pr create --base main`, `gh pr checks --watch`. Verde = pode pedir autorização. (Se o CI do fork não rodar, vale o `--testes` local, dito explicitamente.)
+   Camada A (derivada do git): todo arquivo em que o fork difere do upstream sobreviveu ao merge? Camada B: assinaturas conhecidas (heap do Dockerfile, marca, bloco do Caddy). Com `--testes`: `typecheck` (com 6 GB de heap), `lint`, `test:unit` (e `test:shell` se kit/compose/Caddy/Dockerfile mudaram), sempre com a entrada fechada; **o código de saída é a autoridade**. O script recusa `--testes` numa pasta com `.env` (a VPS). Falhou → pare na branch de sync e traga o diagnóstico; se o teste vigia uma customização listada em `.astra/README.md`, reajuste o teste, não a customização.
+4. **PR e CI antes da `main`:** `git push -u origin sync/upstream-vX.Y.Z`, `gh pr create --base main`, `gh pr checks --watch`. Verde = pode pedir autorização. (Se o CI do fork não rodar, vale o `--testes` local, dito explicitamente.) Pendência conhecida: o job `invariants` reprova no fork enquanto ele não publicar release própria (ver `.astra/README.md`); a aplicação do baseline nesse job passa e é o que importa até lá.
 5. **Pergunta de autorização do merge:** *"Custódia OK e CI verde. Autoriza mesclar na `main`? Isso dispara o build das imagens de produção."* Ao receber: `gh pr merge --merge` (ou merge local + push).
 6. **Build das imagens:** `gh run list --workflow=publish-image.yml --limit 1` até `completed success` (conferir também o job `imagens-ok`). Reporte ao Juta.
 

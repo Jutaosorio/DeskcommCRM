@@ -15,7 +15,7 @@ não desfaça a customização.
 | Customização | Arquivo | Teste ajustado no fork |
 |---|---|---|
 | Tema escuro "Linear Dark" (superfícies mais escuras: contraste MAIOR que o upstream) | `app/globals.css` | `tests/unit/branding-pares-pintados.test.ts` (linhas com `ASTRA`) |
-| E2E desligado no fork (minutos do Actions vão para o build das imagens) | `.github/workflows/e2e.yml` (usa `${GITHUB_REPOSITORY:-melgarafael/DeskcommCRM}` para o teste local exercitar a regra do upstream) | nenhum |
+| E2E desligado no fork (minutos do Actions vão para o build das imagens) | `.github/workflows/e2e.yml` (`FORK_DA_ASTRA` vem do `env:` do passo, que o teste não carrega: ele segue exercitando a regra do upstream) | nenhum |
 | Stack local de staging com as imagens da Astra | `docker-compose.local-vps.yml` | nenhum (o namespace do upstream não pode aparecer escrito à mão) |
 | Heap do build | `Dockerfile` (`NODE_OPTIONS=--max-old-space-size=4096`) | nenhum |
 

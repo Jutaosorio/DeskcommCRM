@@ -1,0 +1,39 @@
+name: contrato-upstream
+
+# A skill `atualizar-crm-custom` assume coisas do upstream (funções do kit, formato do
+# CHANGELOG, nomes de compose…). Quando o upstream muda uma delas, a skill só reclamaria
+# no dia da atualização, no meio do deploy. Este vigia roda `checar-contrato.sh` contra o
+# `main` do upstream toda semana: se o contrato quebrar, o job fica vermelho e o GitHub
+# avisa por e-mail — com dias de folga para corrigir a skill.
+#
+# Só roda em FORK (`if` no job): no próprio upstream não há o que vigiar. Não escreve
+# nada (só `contents: read`), não abre issue, não dispara CI: custa segundos por semana.
+# Observação do GitHub: agendamentos em forks nascem desligados — habilite uma vez em
+# Actions > contrato-upstream > Enable workflow.
+on:
+  schedule:
+    - cron: "23 9 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  contrato:
+    if: github.event.repository.fork
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Buscar o upstream (o pai do fork) e as tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pai="$(gh api "repos/${{ github.repository }}" --jq '.parent.full_name')"
+          test -n "$pai" || { echo "não achei o repositório pai deste fork"; exit 1; }
+          git remote add upstream "https://github.com/$pai.git"
+          git fetch --no-recurse-submodules upstream main --tags
+
+      - name: Conferir o que a skill assume do upstream
+        run: bash .agents/skills/atualizar-crm-custom/scripts/checar-contrato.sh --ref upstream/main

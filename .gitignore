@@ -93,6 +93,10 @@ lib/agent-engine/golden-candidates/stage-divergence_*.json
 .claude/skills/*
 !.claude/skills/sistema-vivo/
 !.claude/skills/deskcomm-*/
+# skill do fork da Astra (fonte em .agents/skills/atualizar-crm-custom)
+!.claude/skills/atualizar-crm-custom/
+# config e verificações DA INSTÂNCIA (ssh, domínio, cliente): nunca vão ao git — ver .astra/README.md
+/.astra/local/
 
 # Local docker volumes (WAHA)
 .waha-data/

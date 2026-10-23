@@ -196,6 +196,14 @@ const GATILHO_ESPERADO: Record<string, { condicao: string | null; efeito: string
       "workflow chamava desde 2026-08-27, e `test:db` sozinho mede um banco VAZIO — constraint " +
       "que só quebra com linha existente passava verde.",
   },
+  // ASTRA: job só de fork (`if: github.event.repository.fork`); não existe no upstream. Ver .astra/README.md.
+  "contrato-upstream.yml::contrato": {
+    condicao: "github.event.repository.fork",
+    efeito:
+      "Este job confere toda semana que o que a skill de atualização assume do upstream ainda é " +
+      "verdade. Desligá-lo devolve o susto no dia da atualização: o contrato quebra no meio do " +
+      "deploy, não antes. Só roda em fork, de propósito — no upstream não há o que vigiar.",
+  },
   "vigia-de-colisao.yml::vigia": {
     condicao: null,
     efeito:

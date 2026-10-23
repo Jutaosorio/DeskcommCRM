@@ -1,0 +1,8 @@
+# Modelo de .astra/local/proibidos.txt — um termo por linha; o destino é ignorado pelo git.
+# Termos que NUNCA podem ir ao fork público. Maiúsculas não importam.
+# Seja específico: um termo curto demais casa com palavras comuns e vira ruído.
+#
+# nome-do-cliente-com-a-grafia-dele
+# dominio-do-cliente.com.br
+# id-da-organizacao-ou-do-tenant
+# nome_de_funcao_de_banco_que_so_o_cliente_tem

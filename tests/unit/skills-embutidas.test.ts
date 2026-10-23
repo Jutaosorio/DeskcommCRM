@@ -56,7 +56,7 @@ const CORPO_MAX_LINHAS = 500;
  * O repo fica com 6.000 no máximo — a sobra é para as skills do próprio
  * usuário, que nenhum teste daqui enxerga.
  */
-const ORCAMENTO_DESCRICOES = 6000;
+const ORCAMENTO_DESCRICOES = 6500; // ASTRA: upstream 6000; +500 p/ atualizar-crm-custom — ver .astra/README.md
 
 function lerSkill(nome: string) {
   const texto = readFileSync(join(RAIZ, FONTE, nome, "SKILL.md"), "utf8");

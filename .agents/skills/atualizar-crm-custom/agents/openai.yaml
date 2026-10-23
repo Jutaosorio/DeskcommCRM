@@ -1,0 +1,6 @@
+interface:
+  display_name: "Atualizar o fork do DeskcommCRM"
+  short_description: "Sincroniza o fork com o upstream oficial preservando as customizações, em 3 checkpoints"
+  default_prompt: "Use a skill atualizar-crm-custom e verifique se há uma versão nova do upstream para sincronizar."
+policy:
+  allow_implicit_invocation: true

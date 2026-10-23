@@ -89,6 +89,9 @@ case "${1:-}" in
       [ -n "${lsha:-}" ] || continue
       case "$lsha" in 0000000*) continue ;; esac                      # apagando branch
       case "${rsha:-0}" in 0000000*) intervalo=("$lsha" --not "--remotes=$REMOTO") ;; *) intervalo=("$rsha..$lsha") ;; esac
+      # O que já está no upstream é público e não é do dono do fork: numa sincronização o push
+      # leva centenas de commits dele (fixtures de teste com "chaves" de mentira incluídas).
+      git remote | grep -qx upstream && intervalo+=(--not --remotes=upstream)
       # `+++ b/caminho` → caminho (a partir do 7º caractere); `+++ /dev/null` vira "ev/null" e é ignorado.
       git log -p -U0 --no-color --format='@@@%h' "${intervalo[@]}" \
         | awk '/^\+\+\+ /{f=substr($0,7); next} /^\+[^+]|^\+$/{ if (f!="" && f!="ev/null") print f "\t" substr($0,2)}' > "$FLUXO"

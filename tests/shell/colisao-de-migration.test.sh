@@ -50,6 +50,11 @@
 #  30. mais de 30 PRs abertos: o gate pede --limit, senão o gh corta calado em 30.
 set -uo pipefail
 
+# O runner do GitHub Actions injeta GITHUB_REF (ex.: refs/pull/7/merge).
+# Se o PR onde a suíte roda for o #7, o gate descartável confunde o PR #7
+# falso dos testes com o próprio PR do runner e o exclui da medição.
+unset GITHUB_REF GITHUB_BASE_REF
+
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GATE_ORIGEM="$RAIZ/scripts/checar-colisao-de-migration.sh"
 

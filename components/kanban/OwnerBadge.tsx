@@ -27,6 +27,7 @@ export function OwnerBadge({
   ownerName,
   agentVersion,
   compacto = false,
+  foraDaEquipe = false,
   className,
 }: {
   ownerKind: OwnerKind;
@@ -42,6 +43,8 @@ export function OwnerBadge({
    * segundo arquivo é como duas telas passam a dizer a mesma coisa de dois jeitos.
    */
   compacto?: boolean;
+  /** O responsável humano saiu da equipe: o nome fica, e o rótulo avisa. */
+  foraDaEquipe?: boolean;
   className?: string;
 }) {
   const t = useT();
@@ -64,7 +67,8 @@ export function OwnerBadge({
   const isAgent = ownerKind === "ai";
   const label = ownerName ?? t(isAgent ? "Agente" : "Responsável");
   const versionSuffix = isAgent && agentVersion != null ? ` · v${agentVersion}` : "";
-  const fullLabel = `${label}${versionSuffix}`;
+  const saiuSuffix = !isAgent && foraDaEquipe ? ` · ${t("Fora da equipe")}` : "";
+  const fullLabel = `${label}${versionSuffix}${saiuSuffix}`;
 
   return (
     <div
@@ -89,7 +93,7 @@ export function OwnerBadge({
       <span
         className={`truncate text-text-muted ${compacto ? "max-w-[7rem] text-[10px]" : "max-w-[9rem] text-xs"}`}
       >
-        {label}
+        {`${label}${saiuSuffix}`}
       </span>
     </div>
   );

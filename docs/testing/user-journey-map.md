@@ -1228,7 +1228,14 @@ enfileirar) e pelo turno (`lib/agent-engine/agent/inbound-turn.ts`, decide
 rodar). Origens que autorizam: webhook do Respondi
 (`app/api/v1/webhooks/in/[token]`), match de campanha na ingestão
 (`lib/channels/pos-entrada.ts` × `organizations.settings.campanhas_whatsapp`),
-ação `send_ai_message`, retomada manual (`lib/escalacao/retomada.ts`).
+ação `send_ai_message`, a retomada manual (`lib/escalacao/retomada.ts`). A campanha de ENTRADA tem um
+segundo efeito além da elegibilidade: se ela declara `agent_id`, a conversa
+que chegou pela frase é atendida pelo agente dela — gravado em
+`conversations.campaign_entry_agent_id` na ingestão (migration 9415) e lido num
+degrau acima do roteador em todo turno dessa conversa, a mesma regra da
+campanha de saída. A régua de elegibilidade continua vindo antes: dono humano,
+`force_human`, `ai_opt_out` e silêncio barram o turno sem que o degrau da
+campanha seja consultado.
 
 | # | Caso | Expectativa | Cobertura |
 |---|---|---|---|
@@ -1251,6 +1258,8 @@ ação `send_ai_message`, retomada manual (`lib/escalacao/retomada.ts`).
 | J20.17 | Cliente antigo irritado (gate allowlist, não autorizado) → worker de sentimento dispara `low_sentiment` | `triggerHandoff` NÃO dispara: sem "um humano vai te atender", sem mexer no estado da conversa | **UNIT** — `handoff-orchestrator-elegibilidade.test.ts` (`bloqueioPorAllowlist` e `conversa_silenciada` barram; fail-closed em erro) |
 | J20.18 | Eu respondo o cliente à mão pelo meu WhatsApp numa conversa autorizada | IA para naquela conversa por um PRAZO renovado a cada nova fala humana — o da EMPRESA (`settings.routing.manual_reply_silence_minutes`, Configurações › Atendimento, 5 min a 24 h; padrão `PRAZO_DO_SILENCIO_MS`, 60 min; diagnóstico de @gaberaldo-svg no #2005: clínica que atende o dia inteiro pelo celular nunca via a IA voltar) —, SEM apagar `ai_authorized_at`; volta sozinha quando o prazo vence, ou antes por "devolver ao automático" | **UNIT** — `atendimento-manual.test.ts` (as duas pontas do prazo medidas pelo motor real `decidirElegibilidade`, renovação, e o que NUNCA encurta: `'infinity'` do handoff formal e janela mais longa) + `waha-ingest-atendimento-manual.test.ts` (via `dispatchWahaEvent` real; eco do próprio envio NÃO pausa) + guarda de fonte no Zernio + fiação em `handoff-fantasma-fiacao.test.ts` + o prazo da empresa em `atendimento-manual.test.ts` (15 min gravado; erro/exceção ao ler o ajuste ainda pausa com 60; `#off` nem consulta) e os valores inválidos em `prazo-silencio-knob.test.ts` + o campo em `app/app/settings/atendimento/_form.test.tsx`; **E2E** — `tests/e2e/j20-elegibilidade-atendimento-manual.spec.ts` (webhook `fromMe` genuíno → `bot_silenced_until` finito e futuro, nunca `'infinity'`, + rastro; `ai_authorized_at` intacto; 2ª mensagem RENOVA o prazo; tela mostra o selo; "devolver ao automático" solta a trava e a autorização continua) |
 | J20.19 | Worker parado acorda com backlog; dois inbound antigos com o MESMO `sent_at` | a "última inbound" é a mais RECENTE (por `created_at`), nunca a de maior uuid — o evento antigo é pulado | **INVARIANTE** — `tests/invariants/drain-recencia-inbound.test.ts` (Postgres real) + `drain.test.ts` guarda a cláusula `coalesce(sent_at, created_at)` |
+| J20.24 | Cliente chega pela FRASE do anúncio e a campanha declara `agent_id` (a tela ainda não existe: a config é jsonb) | A conversa que chegou pela frase é atendida pelo agente DAQUELA campanha — `conversations.campaign_entry_agent_id` (9415) é lido no degrau 0b, acima do roteador, em TODO turno dessa conversa (a mesma regra da campanha de saída); uma conversa nova do mesmo contato volta à régua do número | **UNIT** — `resolve-turn-agent-campanha-de-entrada.test.ts` (GREEN pelo agente da campanha com `agent_id`/`published_version_id`; sem campanha, agente arquivado/sem versão publicada, conversa NOVA do mesmo contato e agente de outra organização caem no agente do número; a segunda mensagem da MESMA conversa continua no agente da campanha) + `agente-da-campanha-de-entrada-marca-a-conversa.test.ts` (a ingestão grava, recortada por organização/conversa, e não sobrescreve a primeira campanha) + **INVARIANTE** — `campanha-de-entrada-nao-perde-a-conversa-no-adiamento.test.ts` (o turno adiado pela janela anti-ban não tira a conversa do agente da campanha; o turno seguinte, dentro da janela, sai por ele) |
+| J20.25 | Campanha de entrada com o DONO HUMANO, `force_human`, "sempre atendimento humano" (`ai_opt_out`) ou bot silenciado | a régua de elegibilidade continua mandando: a IA não fala, e o degrau da campanha nem é consultado | **UNIT** — `campanha-de-entrada-nao-passa-por-cima-da-regua.test.ts` (as quatro recusas com a autorização da campanha vigente; ordem portão → resolução do agente no `inbound-turn.ts`) |
 
 **Sabotagem que confirma:** removendo o veto `sem_autorizacao` de
 `decidirElegibilidade`, `gate.test.ts` e `drain.test.ts` reprovam; restaurado,
@@ -4487,3 +4496,197 @@ Capturas da prova: `evidence/inbox-baixar-midia-e-ordem/01-ordem-das-fotos.png`,
 `evidence/inbox-baixar-midia-e-ordem/04-foto-ampliada-com-baixar.png`,
 `evidence/inbox-baixar-midia-e-ordem/05-menu-da-foto-com-baixar.png`,
 `evidence/inbox-baixar-midia-e-ordem/06-menu-do-pdf-com-baixar.png`.
+
+## J-mcp-oauth — Conectar o ChatGPT ao CRM por OAuth, sem colar token `[P1]` (2026-11-15)
+
+O ChatGPT só oferece OAuth ou "sem autenticação" ao adicionar um servidor MCP; o `/api/mcp` só
+aceitava `Bearer dsk_…`. Migration 9390. Spec: `tests/e2e/mcp-oauth-chatgpt.spec.ts` (parte 8),
+fazendo o papel do aplicativo com um receptor HTTP de verdade no `redirect_uri`; evidência em
+`evidence/mcp-oauth-chatgpt/`. Envs opcionais ausentes (sem Redis, sem WAHA).
+
+| Caso | O que prova | Como |
+|---|---|---|
+| Descoberta | o 401 do `/api/mcp` aponta `resource_metadata`; os dois documentos anunciam o próprio CRM, S256 e o registro | E2E (fetch) |
+| Sem sessão `[P0]` | o `authorize` leva ao login e VOLTA ao consentimento (cookie Strict, pela ponte) | E2E (URL medida) |
+| Consentimento | nome declarado, host de volta, empresa; "Ler e alterar" marcado; Permitir entrega `code` + `state` + `iss` | E2E (tela + receptor) |
+| O token abre o MCP | o `dsk_` emitido responde `tools/list`; a rotação mata o anterior | E2E (fetch no `/api/mcp`) |
+| Saída pela tela | a conexão aparece em API Tokens como "(OAuth)"; Revogar derruba o MCP e a renovação | E2E (tela + fetch) |
+| Cancelar / Somente ler | `access_denied` com o `state`; `scope=mcp:read`; verifier errado queima o código | E2E |
+| Redirect não registrado | página de erro, sem redirecionar | E2E (status + URL) |
+
+Banco (PKCE no SQL, reuso revoga, ainda-admin, isolamento): `tests/invariants/mcp-oauth-servidor.test.ts`.
+**Não medido aqui:** o ChatGPT de verdade — só existe contra um endereço público com HTTPS.
+Evidência: `evidence/mcp-oauth-chatgpt/01-consentimento.png`, `evidence/mcp-oauth-chatgpt/02-volta-ao-aplicativo.png`, `evidence/mcp-oauth-chatgpt/03-conexao-em-api-tokens.png`, `evidence/mcp-oauth-chatgpt/04-conexao-revogada.png`, `evidence/mcp-oauth-chatgpt/05-consentimento-somente-ler.png`, `evidence/mcp-oauth-chatgpt/06-redirect-nao-registrado.png`.
+## J69 — Módulo conectado: instalar, desligar e ligar de novo `[P0]` (2026-11-04)
+
+Specs: nenhuma spec de tela escrita ainda. Cobertura hoje: `tests/invariants/extensoes-conectado.test.ts`
+e `tests/invariants/extensoes-interruptor.test.ts` (banco, `pnpm test:db`, CI `invariants`) e
+`components/extensions/ExtensionsManager.test.tsx` (tela de componente, `pnpm test:unit`, CI `verify`).
+Nenhuma delas abre `/admin/extensoes` num navegador.
+
+Estado: **não executada.** Esta entrega escreve a jornada; nada foi rodado nesta máquina, e o veredito é o CI do fork.
+
+Ambiente previsto: banco fresco aplicado do `supabase/baseline.sql` (não das `migrations/`) com
+`scripts/bootstrap-owner.ts`, envs opcionais ausentes (sem `RESEND_API_KEY`), e um catálogo de laboratório
+com uma entrada `connected` que traz `service_origin` em `https://` (loopback só com a política de laboratório ligada).
+
+**Bloqueio conhecido antes da execução.** O catálogo de laboratório (`experiments/extensoes/catalog/catalog.py`)
+ainda não admite o perfil `connected`: `validate_manifest` recusa todo `profile` diferente de `"declarative"`
+(linha 168) e `entry_from_manifest` (linha 353) não grava `service_origin`. Até isso mudar, o caso J69.1 não
+roda, e os casos seguintes ficam como especificação.
+
+| Caso | Prioridade | Prova prevista | Resultado |
+|---|---|---|---|
+| J69.1 | Admitir um catálogo de laboratório com entrada `connected` e `service_origin` | P0 | Catálogo exportado com `profile: connected` e `service_origin`; a admissão pela UI aceita; banco com a entrada e a origem | **NÃO EXECUTADO** — bloqueado pelo laboratório (ver acima) |
+| J69.2 | Instalar pela UI em `/app/extensions` (bloco da instalação) | P0 | A instalação aparece com perfil `connected`, revisão 1, sem `disabled_at`; banco com recibo `install` concluído | **NÃO EXECUTADO** |
+| J69.3 | Cartão do módulo conectado instalado, em `/app/extensions` | P0 | O cartão mostra o botão Desligar e a nota "Desligar não desinstala: o módulo continua instalado e pode ser ligado de novo." Não há aviso de instalação próprio nesta fase | **NÃO EXECUTADO** |
+| J69.4 | Desligar, em `/app/extensions`; `/admin/extensoes` mostra a etiqueta "Desligado nesta instalação" | P0 | Toast "Módulo desligado nesta instalação."; o cartão mostra "Desligado nesta instalação" com a data e o botão passa a Ligar; banco com `disabled_at` e `disabled_by` preenchidos, revisão +1 e `api_audit_log` com `extension.switched` | **NÃO EXECUTADO** |
+| J69.5 | Ligar de novo, em `/app/extensions` | P0 | Toast "Módulo ligado de novo nesta instalação."; o aviso some; `disabled_at` e `disabled_by` voltam a nulo; revisão +1 | **NÃO EXECUTADO** |
+| J69.6 | Recibo repetido e revisão velha | P1 | A repetição devolve `applied_now` falso sem mexer na revisão; uma revisão velha recarrega a tela e não anuncia sucesso | **CI `invariants`** (banco) e teste de componente escritos; **NÃO EXECUTADO** na tela |
+| J69.7 | Sem módulo conectado instalado | P0 | A tela de extensões é a de hoje: nenhum botão Ligar ou Desligar, nenhuma nota de interruptor | teste de componente escrito; **NÃO EXECUTADO** na tela |
+| J69.8 | Remover um módulo conectado desligado e reinstalar | P0 | Reinstalar reaproveita a mesma linha, zera `removed_at` e mantém `disabled_at`: a instalação volta DESLIGADA; os vínculos das organizações não voltam ativos | **NÃO EXECUTADO.** Verificado só por leitura: `fn_extensions_finish_install` faz `update ... removed_at=null` e não toca em `disabled_at`; nenhum teste cobre este caminho |
+
+**Comportamento declarado.** Reinstalar um módulo removido que estava desligado volta **desligado**. É a escolha do
+lado seguro: quem administra a instalação liga de novo, de propósito.
+
+**Não provado.** A tela inteira (nenhuma execução em navegador); que desligar corta o acesso do serviço (hoje o
+estado é só guardado e mostrado: a F2 e a F4 vão ler `disabled_at`); um aviso de instalação específico para o
+módulo conectado; e a chamada real ao endereço `service_origin`, que nenhuma peça da F1 faz.
+
+## J70 — Módulo conectado: segredo, busca do token e revogação `[P0]` (2026-11-05)
+
+Specs: esta jornada é **especificação**. Nenhuma execução foi feita; o laboratório local ainda não
+admite o perfil `connected` (ver J69.1), então nenhum caso abaixo roda nele. Quando J69.1 passar, os
+casos viram execução; até lá, cada linha descreve o que a tela e o banco devem fazer.
+
+Cobertura hoje, só por escrita (não executada): `tests/invariants/extensoes-token-modulo.test.ts` e
+`tests/invariants/extensoes-token-modulo-funcoes.test.ts` (banco, `pnpm test:db`, CI `invariants`);
+`app/api/v1/extensions/token/route.test.ts` e `app/api/v1/extensions/[id]/segredo/route.test.ts`
+(rota, `pnpm test:unit`, CI `verify`); `lib/extensions/segredo-do-modulo.test.ts`;
+`lib/mcp/auth-ator-modulo.test.ts`; `tests/api/revogar-token-de-modulo-desativa-a-ativacao.test.ts`;
+`components/extensions/ExtensionsManager.test.tsx` e `tests/unit/tokens-lista-modulo-conectado.test.tsx`.
+Nenhuma delas abre `/app/extensions` nem `/app/settings/api-tokens` num navegador.
+
+Estado: **não executada.** Esta entrega escreve a jornada; nada foi rodado nesta máquina, e o veredito é o CI do PR interno.
+
+Ambiente previsto: o mesmo de J69 (banco fresco do `supabase/baseline.sql`, `scripts/bootstrap-owner.ts`,
+envs opcionais ausentes), com `AI_CRED_AES_KEY` definida (sem ela, instalar `connected` falha antes de gravar;
+a mensagem exibida na tela ainda não foi conferida), um módulo de laboratório que assina com o segredo recebido e duas organizações
+para provar o isolamento.
+
+| Caso | Prioridade | Prova prevista | Resultado |
+|---|---|---|---|
+| J70.1 | Instalar um módulo `connected` | P0 | A instalação aparece com perfil `connected`; banco com linha em `extension_installation_secrets` cujo `ciphertext` não é o segredo em claro | **NÃO EXECUTADO** (depende de J69.1) |
+| J70.2 | Gerar o segredo e vê-lo uma vez | P0 | Botão "Gerar segredo" no cartão abre a caixa com o segredo; fechar a caixa apaga o valor da tela; reabrir não mostra de novo; `api_audit_log` com `extension.secret_rotated` e sem o valor | **NÃO EXECUTADO** |
+| J70.3 | Gerar novo segredo | P0 | Botão "Gerar novo segredo"; os tokens vivos da instalação somem da tela de tokens; uma busca com o segredo antigo é recusada | **NÃO EXECUTADO** |
+| J70.4 | Ativar numa organização | P0 | Ativar reserva a vaga: a linha "Módulo <slug>" aparece na tela de tokens da organização. Previsto, não medido: a vaga ainda não tem texto utilizável, porque o banco guarda só um hash que ninguém conhece | **NÃO EXECUTADO** |
+| J70.5 | O módulo busca o token com a assinatura | P0 | `POST /api/v1/extensions/token` com `X-Module-*` assinados devolve `token` e `expires_at` (1 h); apresentado como Bearer, o token passa pelo portão por área de `resolveAuthDual` em `/api/v1` (casos na J71) e é recusado com 403 em `/api/mcp` (`app/api/mcp/route.ts`) | **NÃO EXECUTADO** |
+| J70.6 | Ver o token na tela de tokens | P0 | Linha "Módulo <slug>" com o prefixo, sem botão de copiar; nenhum texto do token aparece na tela | **NÃO EXECUTADO** |
+| J70.7 | Revogar na tela desativa o módulo | P0 | Botão "Revogar" na linha do módulo; a ativação daquela organização passa a desativada e o token fica revogado, na mesma transação | **NÃO EXECUTADO** |
+| J70.8 | Repetir a busca com o mesmo nonce | P1 | Segunda busca com o mesmo `X-Module-Nonce` recusa; a resposta é idêntica à de assinatura errada e à de instalação inexistente | **CI** (rota e banco) escritos; **NÃO EXECUTADO** |
+| J70.9 | Carimbo fora de ±5 min | P1 | Carimbo com 5 min exatos entra; com mais de 5 min recusa; a recusa não troca o hash da vaga | **CI** (unit e rota) escritos; **NÃO EXECUTADO** |
+| J70.10 | Desligar a instalação corta a busca | P1 | Com `disabled_at`, a busca recusa e não troca o hash; desligar revoga os tokens de todas as organizações da instalação | **CI** (banco) escrito; **NÃO EXECUTADO** |
+| J70.11 | Limite de 50 tokens vivos | P1 | Organização com 50 tokens vivos: ativar `connected` falha inteiro e `organization_extensions` não muda | **CI** (banco) escrito; **NÃO EXECUTADO** |
+| J70.12 | Duas buscas simultâneas | P1 | Duas buscas do mesmo par deixam um só token vivo; a outra recebe recusa ou o mesmo resultado | **só CI de banco** (`extensoes-token-modulo-funcoes.test.ts`); **NÃO EXECUTADO** |
+| J70.13 | Isolamento entre organizações | P0 | Token emitido para a organização A não existe para a B; a instalação ativa só na B não emite nada para a A | **CI** (banco e rota) escrito; **NÃO EXECUTADO** |
+
+**Comportamento declarado.** O token do módulo vale uma hora e é renovado por nova busca; não há token
+de longa duração na F2. Revogar na tela de tokens desativa a ativação daquela organização: para voltar,
+quem administra a organização ativa o módulo de novo, de propósito.
+
+**Não provado.** Nenhum caso acima foi executado num navegador; que o módulo real (fora do laboratório) consiga
+assinar e buscar; a concorrência entre buscas só é provada pelos invariantes de banco, nunca por uma
+jornada em tela; e que a autoridade do token seja limitada por área (isso é da F3, e o token da F2 só
+tem `mcp:read`).
+
+## J71 — Módulo conectado: consentimento por área e ator com pessoa `[P0]` (2026-11-05)
+
+Specs: esta jornada é **especificação**. Nenhuma execução foi feita; o laboratório local ainda não
+admite o perfil `connected` (ver J69.1), então nenhum caso abaixo roda nele. Quando J69.1 passar, os
+casos viram execução; até lá, cada linha descreve o que a tela e o banco devem fazer.
+
+Cobertura hoje, só por escrita (não executada): `tests/invariants/extensoes-consentimento.test.ts`
+(banco, `pnpm test:db`, CI `invariants`); `app/api/v1/extensions/[id]/consentimento/route.test.ts`,
+`app/api/v1/extensions/[id]/contexto/route.test.ts`, `lib/auth/modulo-autorizado.test.ts`,
+`lib/auth/portas-de-token/areas.test.ts`, `lib/api/auth-dual-modulo.test.ts`,
+`lib/api/auth-dual-contexto.test.ts`, `lib/audit/ator-modulo.test.ts` (rota e lib, `pnpm test:unit`, CI
+`verify`); `components/extensions/ConsentimentoPorArea.test.tsx`. Nenhuma delas abre `/app/extensions`
+num navegador.
+
+Estado: **não executada.** Esta entrega escreve a jornada; nada foi rodado nesta máquina, e o veredito é o CI do PR interno.
+
+Ambiente previsto: o mesmo de J70, mais `MODULE_JWT_PRIVATE_KEY` definida para os casos com pessoa, um
+módulo de laboratório que declara áreas de leitura e de escrita, uma pessoa `viewer`, uma `manager` e uma
+`admin`, e duas organizações para provar o isolamento.
+
+| Caso | Prioridade | Prova prevista | Resultado |
+|---|---|---|---|
+| J69.1 | Ver as áreas declaradas ao ativar | P0 | A ativação lista, em frases legíveis, só as áreas que o pacote declarou, cada uma com caixa de seleção, nenhuma marcada de início | **NÃO EXECUTADO** (depende de J69.1) |
+| J69.2 | Consentir uma área | P0 | O admin marca e salva; o cartão mostra a área consentida; `api_audit_log` com `extension.consent_changed` e a lista de áreas, sem dado pessoal | **NÃO EXECUTADO** |
+| J69.3 | Manager e agent não alteram | P0 | Quem não é admin vê o consentimento atual, com o motivo de não poder mudar; a rota responde 403 | **CI** (rota) escrito; **NÃO EXECUTADO** |
+| J69.4 | Área não declarada | P1 | Consentir uma área que o pacote não declarou recusa com 409 e nada é gravado | **CI** (rota e banco) escritos; **NÃO EXECUTADO** |
+| J69.5 | Módulo sem consentimento | P0 | Chamada do módulo a uma área não consentida recusa com 403; o consentimento é lido do banco a cada chamada | **CI** (unit) escrito; **NÃO EXECUTADO** |
+| J69.6 | Modo da porta | P0 | Área consentida só para leitura aceita GET e recusa POST na mesma área | **CI** (unit) escrito; **NÃO EXECUTADO** |
+| J69.7 | Retirar o consentimento | P0 | O admin desmarca e salva; a chamada seguinte do mesmo token recusa, sem esperar o token expirar | **NÃO EXECUTADO** |
+| J69.8 | Pessoa limita o papel | P0 | Com JWT de contexto de pessoa `viewer`, uma rota que pede `manager` recusa mesmo que o token do módulo permita; o papel efetivo é o menor dos dois | **CI** (unit) escrito; **NÃO EXECUTADO** |
+| J69.9 | Pessoa admin vira manager | P1 | Com pessoa `admin`, uma rota que pede `admin` recusa: o módulo nunca age como admin | **CI** (unit) escrito; **NÃO EXECUTADO** |
+| J69.10 | Pessoa rebaixada entre duas chamadas | P1 | Rebaixar a pessoa muda o papel efetivo na chamada seguinte, com o mesmo JWT ainda válido | **CI** (unit) escrito; **NÃO EXECUTADO** |
+| J69.11 | Atribuição no audit | P0 | Mutação feita pelo módulo com JWT de pessoa grava `actor_api_token_id` e `metadata.module` como antes, mais `metadata.person_id`; `actor_user_id` continua nulo | **CI** (unit, `ator-modulo.test.ts`) escrito; **NÃO EXECUTADO** |
+| J69.12 | Isolamento entre organizações | P0 | Consentimento da organização A não vale na B; JWT de contexto de uma organização não abre a outra | **CI** (banco e rota) escrito; **NÃO EXECUTADO** |
+
+**Comportamento declarado.** Declarado pelo pacote e consentido pela organização, os dois, no modo certo:
+sem um deles, a chamada recusa. Quem consente é só o admin da organização. A pessoa do JWT só limita
+(nunca amplia) e só atribui no audit; ela não vira dono do registro criado.
+
+**Não provado.** Nenhum caso acima foi executado num navegador; que o módulo real consiga assinar o JWT
+de contexto e que a tela dele o repasse; que as mutações de todas as rotas gravem `person_id` (só o
+mecanismo comum, `metadataDoModulo`, foi coberto, e as rotas que não o usam não levam a pessoa); e o
+comportamento de quem já tem consentimento em edição ao mesmo tempo em duas abas.
+## Consultas MCP no Testar e no assistido — resgate #3564 (2026-10-27)
+
+Fonte preservada: `8088f3a65e3e3cece8d7427487ec4725f9aa23e8`, de @Denispds.
+Uma consulta externa escolhida como leitura pelo administrador e declarada
+`readOnlyHint` pelo servidor era recusada como ferramenta desconhecida na prévia.
+O montador agora marca o objeto final, e a política reconhece essa identidade;
+os wrappers do inbound preservam o objeto até essa decisão. Escritas, cópias e
+nomes colidentes continuam sujeitos às guardas existentes.
+
+**PASS da composição inprocess, sem prova de rota HTTP ou UX.** A bancada
+reservada aplicou o baseline canônico em PG17 nos modos INSTALL e UPDATE com
+`ON_ERROR_STOP`, moldes de uma/duas aplicações e banco novo por arquivo. Rodaram
+somente `pg-como-supabase.test.ts` e `mcp-previa-composta.test.ts`, um worker:
+33/33 antes dos controles causais (20,178s de processo) e 33/33 após restaurar
+os hashes (20,036s). No GREEN final, os 12 casos novos somaram 12,496s;
+os 21 controles do adapter somaram 0,556s. Não foi executada a suíte DB inteira.
+O unitário recortado e seus dois vizinhos passaram 34/34 antes da bancada.
+
+| Caminho medido | Resultado observado no código final |
+|---|---|
+| Testar e rascunho assistido | motor real → pick/wrappers/policy reais, mesma referência marcada → SDK e socket HTTP reais → candidata com o texto recebido |
+| Hint ausente/falso ou escolha de escrita | impedimento antes de chamar a ferramenta no servidor |
+| Cópia deliberada e nome nativo colidente | cópia sem autoridade pela marca; implementação nativa preservada; nenhuma chamada remota |
+| Sem escolha/opção, identidade divergente e contato de outra organização | descoberta/execução recusadas nos pontos correspondentes |
+| Recusa do fornecedor | chamada observada, sem candidata de consulta bem-sucedida |
+| Instrumento | bytes cifrados comparados, carga/descriptografia reais, token de leitura revogado, auditoria real e estado operacional do cliente preservado |
+
+As sabotagens tiveram RED reais, com as previsões originais preservadas:
+remover a marca deu 5 falhas/7 passes, em vez de 4/8, pois o controle de recusa
+também deixou de alcançar o socket. Substituir a conferência da marca por
+`!catalog` deu 7 falhas/5 passes: além dos controles de classificação, o mutante
+amplo liberou `send_message` sem o tratamento da prévia e atingiu o veto
+`preview_operational_job_forbidden`. Não se alteraram asserções para acertar a
+contagem; os hashes foram restaurados antes do novo GREEN separado.
+
+O adapter PG existente foi mantido. Só o teste novo traduz `api_tokens.scopes`
+para JSONB e conserva bytea no formato wire em um pool separado; o pool do motor,
+o token e a criptografia permanecem reais. Provider do modelo e fornecedor MCP
+são sintéticos explícitos; a exceção de transporte fica na junta existente do
+teste para seu próprio socket efêmero. AntiSSRF produtivo permanece intacto.
+Não foram medidos PostgREST, Auth, RLS, rotas HTTP, interface, ERP ou modelo
+público. Os cinco checks do novo head remoto continuam obrigatórios e pendentes
+até sua própria execução; este registro não é um E2E global verde.
+
+O retorno usa os consumidores existentes: `mcp.tool_called` na auditoria e
+impedimentos no resultado da prévia ajudam o operador a revisar as escolhas em
+Capacidades e a configuração do servidor externo. A próxima execução relê essa
+configuração; não há novo subsistema, tela, rota ou autorização de escrita.
